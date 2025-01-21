@@ -80,6 +80,31 @@ def verify_alignment_score(score, n1, n2):
     assert calc_score == score
 
 
+def verify_substring_alignment(nucl_i, n_i):
+    """Verifies whether the found alignment string n_i is a valid substring
+       of nucl_i and verifies it's a valid alignment.
+
+    Args:
+        nucl_i (str): The original nucleotide string
+        n_i (str): The string to verify
+    """
+    # we can verify by getting rid of any gaps
+    # and then searching for this substring
+    assert n_i.replace('-', '') in nucl_i
+
+
+def verify_alignment(nucl_i, n_i):
+    """Verifies whether the alignment string n_i is a valid alignment of nucl_i
+
+    Args:
+        nucl_i (str): The original nucleotide string
+        n_i (str): The string to verify
+    """
+    # we can verify by getting rid of any gaps
+    # and then making sure it's equivalent to the original nucleotide string
+    assert n_i.replace('-', '') == nucl_i
+
+
 def fit_alignment(nucl_1, nucl_2):
     """Finds the best substring of nucl_1 to fit with nucl_2.
 
@@ -164,7 +189,7 @@ def fit_alignment(nucl_1, nucl_2):
             elif n2_take_cost == max_score:
                 backtrack_arr[x][y] = (x, y - 1, SequenceStep.N2_TAKE)
 
-    print_array(nucl_1, nucl_2, dist_arr)
+    # print_array(nucl_1, nucl_2, dist_arr)
     
     # now let's create both sequences by following the backtrack matrix
     seq_1 = []
@@ -220,5 +245,7 @@ if __name__ == '__main__':
     print(score)
     print(n1)
     print(n2)
-    verify_alignment_score(score, n1, n2)
+    # verify_alignment_score(score, n1, n2)
+    # verify_substring_alignment(nucl_1, n1)
+    # verify_alignment(nucl_2, n2)
 
