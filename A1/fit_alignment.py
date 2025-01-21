@@ -58,21 +58,61 @@ def print_array(nucl_1, nucl_2, arr):
         print()
 
 
-def maximal_alignment(nucl_1, nucl_2):
-    """Calculates and returns the maximal alignment number to transform nucl_1 and nucl_2
+def verify_alignment_score(score, n1, n2):
+    """Verifies that the n1 and n2 alignments match up with the reported score.
 
     Args:
-        nucl_1 (str): First parsed nucleotide string.
-        nucl_2 (str): Second parsed nucleotide string.
+        score (int): The score calculated through the alignment result
+        n1 (str): The first nucleotide string alignment found
+        n2 (str): The second nucleotide string alignment found
+    """
+    assert len(n1) == len(n2)
+
+    # calculate the score based on the alignments
+    calc_score = 0
+    for i in range(len(n1)):
+        # make sure not both of them are gaps
+        assert not (n1[i] == '-' and n2[i] == '-')
+        if n1[i] == n2[i]:
+            calc_score += 1
+        else:
+            calc_score -= 1
+    assert calc_score == score
+
+
+def fit_alignment(nucl_1, nucl_2):
+    """Finds the best substring of nucl_1 to fit with nucl_2.
+
+    Runs in O(vw) time because we're running a local alignment sequence and finding the best
+    score and backtracking from that score.
+
+    We can reword this problem to be the following:
+        Given the alignment grid, what's the maximal alignment score we can get from alignments
+        starting from the 0th column to the mth column.
+
+    To accomplish this, we essentially run the exact same algorithm with the exception that 
+    our starting point is anywhere alongside the first column, and our ending point is anywhere
+    alongside the last column.
     
+    To make this work, we just need to simply not penalize starting from anywhere in the first column,
+    initializing everything to a 0, and marking it as an end.
+
+    Args:
+        nucl_1 (str): The string to substring. Must be of equal or greater length than nucl_2
+        nucl_2 (str): The string to fit with.
+
     Returns:
         sequence_score: The final sequence score
         n1: The final sequence for nucl_1
         n2: The final sequence for nucl_2
     """
+    assert len(nucl_1) >= len(nucl_2)
+
     # Tackle this through dynamic programming
-    # We'll create an array matrix that's n x m size
+    # We'll create an array matrix that's n x m size (or rather v x w size)
     # where n is the number of characters in nucl_1 and m is the number of characters in nucl_2
+    # we differ in this case by not finding the best global alignment, rather we find the best alignment
+    # that starts in the 0th column and ends in the 1st column
 
     n, m = len(nucl_1), len(nucl_2)
     dist_arr = [[0 for _ in range(m + 1)] for _ in range(n + 1)]
@@ -80,8 +120,8 @@ def maximal_alignment(nucl_1, nucl_2):
 
     # now start in the top left corner, at (0, 0) and fill out the columns and rows as needed
     for i in range(n + 1):
-        dist_arr[i][0] = -i
-        backtrack_arr[i][0] = (i - 1, 0, SequenceStep.N1_TAKE)
+        dist_arr[i][0] = 0
+        backtrack_arr[i][0] = (i - 1, 0, SequenceStep.END)
 
     for i in range(m + 1):
         dist_arr[0][i] = -i
@@ -101,7 +141,7 @@ def maximal_alignment(nucl_1, nucl_2):
         for x in range(max(i - m, 1), min(i, n + 1)):
             y = i - x
             
-            # now we take the maximal edit distance by simply penalizing it if we need to take either way
+            # now we take the maximal edit distance by simply penalizing it if it's wrong
             # n?_take_cost means the cost of choosing a gap in the opposite string and choosing this string
             n1_take_cost = dist_arr[x - 1][y] - 1
             n2_take_cost = dist_arr[x][y - 1] - 1
@@ -124,18 +164,25 @@ def maximal_alignment(nucl_1, nucl_2):
             elif n2_take_cost == max_score:
                 backtrack_arr[x][y] = (x, y - 1, SequenceStep.N2_TAKE)
 
-    # print_array(nucl_1, nucl_2, dist_arr)
+    print_array(nucl_1, nucl_2, dist_arr)
     
     # now let's create both sequences by following the backtrack matrix
     seq_1 = []
     seq_2 = []
 
+    # first we need to find the highest value in the final column
+    coord = None
+    final_max_score = None
+    for i in range(n):
+        if coord == None or final_max_score == None or final_max_score < dist_arr[i][m]:
+            final_max_score = dist_arr[i][m]
+            coord = (i, m)
+
     # the max number of steps should be n + m
     # keep track of the coordinates of where we are
-    coord = (n, m)
     for i in range(n + m):
         # stop once we get to the start
-        if coord[0] == 0 and coord[1] == 0:
+        if coord[1] == 0:
             break
 
         # for each coordinate we have, figure out its previous step and recreate the steps
@@ -150,53 +197,14 @@ def maximal_alignment(nucl_1, nucl_2):
             seq_1.append(nucl_1[coord[0]])
             seq_2.append(nucl_2[coord[1]])
         elif coord[2] == SequenceStep.END:
-            assert coord[0] == coord[1] and coord[0] == 0
+            # make sure we're in the first column now
+            assert coord[1] == 0
 
     # create the final strings we need
     n1 = "".join(reversed(seq_1))
     n2 = "".join(reversed(seq_2))
 
-    return dist_arr[n][m], n1, n2
-
-
-def fit_alignment(nucl_1, nucl_2):
-    """Finds the best substring of nucl_1 to fit with nucl_2
-
-    Runs in O(v^3) time, with O(v^2) substrings and O(v + w) = O(v) time
-    to find the best fitting alignment.
-
-    Args:
-        nucl_1 (str): The string to substring. Must be of equal or greater length than nucl_2
-        nucl_2 (str): The string to fit with.
-    """
-    assert len(nucl_1) >= len(nucl_2)
-
-    # first, generate all possible substrings, making sure they're unique
-    n1_substrings = set()
-
-    # range over the end character
-    for i in range(len(nucl_1)):
-        # range over the start character
-        for j in range(i + 1):
-            n1_substrings.add(nucl_1[j:i + 1])
-    
-    # now, for each substring we have calculate their alignment score
-    max_alignment_score = None
-    n1_max = None
-    n2_max = None
-
-    # choose the best alignment score over all maximal alignments
-    for substr in n1_substrings:
-        alignment_score, n1, n2 = maximal_alignment(substr, nucl_2)
-        # print(substr, nucl_2, alignment_score)
-
-        if max_alignment_score == None or max_alignment_score < alignment_score:
-            max_alignment_score = alignment_score
-            n1_max = n1
-            n2_max = n2
-    
-    return max_alignment_score, n1_max, n2_max
-
+    return final_max_score, n1, n2
 
 if __name__ == '__main__':
     # first parse for the input file
@@ -212,3 +220,5 @@ if __name__ == '__main__':
     print(score)
     print(n1)
     print(n2)
+    verify_alignment_score(score, n1, n2)
+
