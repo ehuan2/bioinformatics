@@ -58,6 +58,27 @@ def print_array(nucl_1, nucl_2, arr):
         print()
 
 
+def verify_alignment_score(score, n1, n2):
+    """Verifies that the n1 and n2 alignments match up with the reported score.
+
+    Args:
+        score (int): The score calculated through the alignment result
+        n1 (str): The first nucleotide string alignment found
+        n2 (str): The second nucleotide string alignment found
+    """
+    assert len(n1) == len(n2)
+
+    # calculate the score based on the alignments
+    calc_score = 0
+    for i in range(len(n1)):
+        # make sure not both of them are gaps
+        assert not (n1[i] == '-' and n2[i] == '-')
+        if n1[i] == n2[i]:
+            calc_score += 1
+        else:
+            calc_score -= 1
+    assert calc_score == score
+
 def fit_alignment(nucl_1, nucl_2):
     """Finds the best substring of nucl_1 to fit with nucl_2.
 
@@ -198,3 +219,5 @@ if __name__ == '__main__':
     print(score)
     print(n1)
     print(n2)
+    verify_alignment_score(score, n1, n2)
+
