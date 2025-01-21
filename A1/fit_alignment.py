@@ -1,4 +1,4 @@
-# edit_distance.py
+# fit_alignment.py
 # Author: Eric Huang
 # Date: January 20th 2025
 import argparse
@@ -18,6 +18,7 @@ class SequenceStep(Enum):
     N1_TAKE = 1
     N2_TAKE = 2
     MISMATCH = 3
+
 
 def parse_fasta(input_file):
     """Parses the input FASTA file (expecting two lines) and returns the two strings
@@ -57,15 +58,17 @@ def print_array(nucl_1, nucl_2, arr):
         print()
 
 
-def edit_distance(nucl_1, nucl_2):
-    """Calculates and returns the minimal number of edit operations to transform nucl_1 to nucl_2
+def maximal_alignment(nucl_1, nucl_2):
+    """Calculates and returns the maximal alignment number to transform nucl_1 and nucl_2
 
     Args:
         nucl_1 (str): First parsed nucleotide string.
         nucl_2 (str): Second parsed nucleotide string.
     
     Returns:
-        edit_distance: The minimal number of edit operations.
+        sequence_score: The final sequence score
+        n1: The final sequence for nucl_1
+        n2: The final sequence for nucl_2
     """
     # Tackle this through dynamic programming
     # We'll create an array matrix that's n x m size
@@ -77,11 +80,11 @@ def edit_distance(nucl_1, nucl_2):
 
     # now start in the top left corner, at (0, 0) and fill out the columns and rows as needed
     for i in range(n + 1):
-        dist_arr[i][0] = i
+        dist_arr[i][0] = -i
         backtrack_arr[i][0] = (i - 1, 0, SequenceStep.N1_TAKE)
 
     for i in range(m + 1):
-        dist_arr[0][i] = i
+        dist_arr[0][i] = -i
         backtrack_arr[0][i] = (0, i - 1, SequenceStep.N2_TAKE)
 
     # set the base case
@@ -98,32 +101,32 @@ def edit_distance(nucl_1, nucl_2):
         for x in range(max(i - m, 1), min(i, n + 1)):
             y = i - x
             
-            # now we take the minimal edit distance by simply penalizing it if we need to edit
+            # now we take the maximal edit distance by simply penalizing it if we need to take either way
             # n?_take_cost means the cost of choosing a gap in the opposite string and choosing this string
-            n1_take_cost = dist_arr[x - 1][y] + 1
-            n2_take_cost = dist_arr[x][y - 1] + 1
-            # mismatch cost means the cost of matching them up
-            mismatch_cost = dist_arr[x - 1][y - 1] + (0 if nucl_1[x - 1] == nucl_2[y - 1] else 1)
+            n1_take_cost = dist_arr[x - 1][y] - 1
+            n2_take_cost = dist_arr[x][y - 1] - 1
+            # mismatch cost means the cost of matching them up, rewarding +1 if it matches, -1 otherwise
+            mismatch_cost = dist_arr[x - 1][y - 1] + (1 if nucl_1[x - 1] == nucl_2[y - 1] else -1)
 
-            min_cost = min(
+            max_score = max(
                 n1_take_cost,
                 n2_take_cost,
                 mismatch_cost
             )
 
-            dist_arr[x][y] = min_cost
+            dist_arr[x][y] = max_score
 
-            if mismatch_cost == min_cost:
+            if mismatch_cost == max_score:
                 # then this is the best path
                 backtrack_arr[x][y] = (x - 1, y - 1, SequenceStep.MISMATCH)
-            elif n1_take_cost == min_cost:
+            elif n1_take_cost == max_score:
                 backtrack_arr[x][y] = (x - 1, y, SequenceStep.N1_TAKE)
-            elif n2_take_cost == min_cost:
+            elif n2_take_cost == max_score:
                 backtrack_arr[x][y] = (x, y - 1, SequenceStep.N2_TAKE)
 
     # print_array(nucl_1, nucl_2, dist_arr)
     
-    # now let's print the two sequences
+    # now let's create both sequences by following the backtrack matrix
     seq_1 = []
     seq_2 = []
 
@@ -131,9 +134,11 @@ def edit_distance(nucl_1, nucl_2):
     # keep track of the coordinates of where we are
     coord = (n, m)
     for i in range(n + m):
+        # stop once we get to the start
         if coord[0] == 0 and coord[1] == 0:
             break
 
+        # for each coordinate we have, figure out its previous step and recreate the steps
         coord = backtrack_arr[coord[0]][coord[1]]
         if coord[2] == SequenceStep.N1_TAKE:
             seq_1.append(nucl_1[coord[0]])
@@ -147,10 +152,50 @@ def edit_distance(nucl_1, nucl_2):
         elif coord[2] == SequenceStep.END:
             assert coord[0] == coord[1] and coord[0] == 0
 
-    # print("".join(reversed(seq_1)))
-    # print("".join(reversed(seq_2)))
+    # create the final strings we need
+    n1 = "".join(reversed(seq_1))
+    n2 = "".join(reversed(seq_2))
 
-    return dist_arr[n][m]
+    return dist_arr[n][m], n1, n2
+
+
+def fit_alignment(nucl_1, nucl_2):
+    """Finds the best substring of nucl_1 to fit with nucl_2
+
+    Runs in O(v^3) time, with O(v^2) substrings and O(v + w) = O(v) time
+    to find the best fitting alignment.
+
+    Args:
+        nucl_1 (str): The string to substring. Must be of equal or greater length than nucl_2
+        nucl_2 (str): The string to fit with.
+    """
+    assert len(nucl_1) >= len(nucl_2)
+
+    # first, generate all possible substrings, making sure they're unique
+    n1_substrings = set()
+
+    # range over the end character
+    for i in range(len(nucl_1)):
+        # range over the start character
+        for j in range(i + 1):
+            n1_substrings.add(nucl_1[j:i + 1])
+    
+    # now, for each substring we have calculate their alignment score
+    max_alignment_score = None
+    n1_max = None
+    n2_max = None
+
+    # choose the best alignment score over all maximal alignments
+    for substr in n1_substrings:
+        alignment_score, n1, n2 = maximal_alignment(substr, nucl_2)
+        # print(substr, nucl_2, alignment_score)
+
+        if max_alignment_score == None or max_alignment_score < alignment_score:
+            max_alignment_score = alignment_score
+            n1_max = n1
+            n2_max = n2
+    
+    return max_alignment_score, n1_max, n2_max
 
 
 if __name__ == '__main__':
@@ -162,5 +207,8 @@ if __name__ == '__main__':
     # now parse the fasta file with two nucleotide strings
     nucl_1, nucl_2 = parse_fasta(args.input)
 
-    # and finally output the edit distance between the two
-    print(edit_distance(nucl_1, nucl_2))
+    # and finally output the best fit alignment
+    score, n1, n2 = fit_alignment(nucl_1, nucl_2)
+    print(score)
+    print(n1)
+    print(n2)
