@@ -5,6 +5,7 @@ import argparse
 import os
 from enum import Enum
 
+DEBUG = False
 
 class SequenceStep(Enum):
     """Enum for declaring the possible alignment sequence steps we can take
@@ -19,21 +20,42 @@ class SequenceStep(Enum):
     N2_TAKE = 2
     MISMATCH = 3
 
+
 def parse_fasta(input_file):
-    """Parses the input FASTA file (expecting two lines) and returns the two strings
+    """Parses the input FASTA file and returns an array of tuples of sequence names and sequences
 
     Args:
         input_file (str): Path to the FASTA file.
     
     Returns:
-        nucl_1 (str): First parsed nucleotide string.
-        nucl_2 (str): Second parsed nucleotide string.
+        seqs (array of dicts): array of dicts of sequence names and sequences
     """
     assert os.path.isfile(input_file)
 
     with open(input_file, 'r') as file:
         lines = [line.strip() for line in file.readlines()]
-        return lines[1], lines[3]
+
+    seqs = []
+    current_str = ''
+    current_key = None
+
+    for line in lines:
+        if len(line) > 0 and line[0] == '>':
+            if current_key != None:
+                seqs.append({
+                    'key': current_key,
+                    'seq': current_str
+                })
+                current_str = ''
+            current_key = line[1:]
+        else:
+            current_str += line
+
+    seqs.append({
+        'key': current_key,
+        'seq': current_str
+    })
+    return seqs
 
 
 def print_array(nucl_1, nucl_2, arr):
@@ -113,42 +135,72 @@ def edit_distance(nucl_1, nucl_2):
 
             dist_arr[x][y] = min_cost
 
-            if mismatch_cost == min_cost:
-                # then this is the best path
-                backtrack_arr[x][y] = (x - 1, y - 1, SequenceStep.MISMATCH)
-            elif n1_take_cost == min_cost:
-                backtrack_arr[x][y] = (x - 1, y, SequenceStep.N1_TAKE)
-            elif n2_take_cost == min_cost:
-                backtrack_arr[x][y] = (x, y - 1, SequenceStep.N2_TAKE)
+            if DEBUG:
+                if mismatch_cost == min_cost:
+                    # then this is the best path
+                    backtrack_arr[x][y] = (x - 1, y - 1, SequenceStep.MISMATCH)
+                elif n1_take_cost == min_cost:
+                    backtrack_arr[x][y] = (x - 1, y, SequenceStep.N1_TAKE)
+                elif n2_take_cost == min_cost:
+                    backtrack_arr[x][y] = (x, y - 1, SequenceStep.N2_TAKE)
 
-    # print_array(nucl_1, nucl_2, dist_arr)
+
+    if DEBUG:
+        print_array(nucl_1, nucl_2, dist_arr)
     
-    # now let's print the two sequences
-    seq_1 = []
-    seq_2 = []
+        # now let's print the two sequences. Technically we only want
+        # the sequence such that seq_1 matches seq_2, however in this case
+        # they do match up
+        seq_1 = []
+        seq_2 = []
 
-    # the max number of steps should be n + m
-    # keep track of the coordinates of where we are
-    coord = (n, m)
-    for i in range(n + m):
-        if coord[0] == 0 and coord[1] == 0:
-            break
+        # we'll still print mod_seq_i
+        mod_seq_1 = []
+        mod_seq_2 = []
 
-        coord = backtrack_arr[coord[0]][coord[1]]
-        if coord[2] == SequenceStep.N1_TAKE:
-            seq_1.append(nucl_1[coord[0]])
-            seq_2.append('-')
-        elif coord[2] == SequenceStep.N2_TAKE:
-            seq_1.append('-')
-            seq_2.append(nucl_2[coord[1]])
-        elif coord[2] == SequenceStep.MISMATCH:
-            seq_1.append(nucl_1[coord[0]])
-            seq_2.append(nucl_2[coord[1]])
-        elif coord[2] == SequenceStep.END:
-            assert coord[0] == coord[1] and coord[0] == 0
+        # the max number of steps should be n + m
+        # keep track of the coordinates of where we are
+        coord = (n, m)
 
-    # print("".join(reversed(seq_1)))
-    # print("".join(reversed(seq_2)))
+        edit_score = 0
+
+        for i in range(n + m):
+            if coord[0] == 0 and coord[1] == 0:
+                break
+
+            coord = backtrack_arr[coord[0]][coord[1]]
+            if coord[2] == SequenceStep.N1_TAKE:
+                # should be a deletion in this case... do nothing to the regular seq
+
+                mod_seq_1.append(nucl_1[coord[0]])
+                mod_seq_2.append('-')
+
+                edit_score += 1
+            elif coord[2] == SequenceStep.N2_TAKE:
+                mod_seq_1.append('-')
+                mod_seq_2.append(nucl_2[coord[1]])
+
+                seq_1.append(nucl_2[coord[1]])
+                seq_2.append(nucl_2[coord[1]])
+                edit_score += 1
+            elif coord[2] == SequenceStep.MISMATCH:
+                mod_seq_1.append(nucl_1[coord[0]])
+                mod_seq_2.append(nucl_2[coord[1]])
+
+                seq_1.append(nucl_2[coord[1]])
+                seq_2.append(nucl_2[coord[1]])
+                edit_score += 1 if nucl_1[coord[0]] != nucl_2[coord[1]] else 0
+            elif coord[2] == SequenceStep.END:
+                assert coord[0] == coord[1] and coord[0] == 0
+
+        n1 = "".join(reversed(seq_1))
+        n2 = "".join(reversed(seq_2))
+        assert edit_score == dist_arr[n][m]
+        assert n1 == n2
+        print("Score is correct, strings are also edited to each other")
+        print("Modified strings:")
+        print("".join(reversed(mod_seq_1)))
+        print("".join(reversed(mod_seq_2)))
 
     return dist_arr[n][m]
 
@@ -157,10 +209,14 @@ if __name__ == '__main__':
     # first parse for the input file
     parser = argparse.ArgumentParser()
     parser.add_argument('--input', required=True)
+    parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
 
+    DEBUG = args.debug
+
     # now parse the fasta file with two nucleotide strings
-    nucl_1, nucl_2 = parse_fasta(args.input)
+    seqs = parse_fasta(args.input)
+    nucl_1, nucl_2 = seqs[0]['seq'], seqs[1]['seq']
 
     # and finally output the edit distance between the two
     print(edit_distance(nucl_1, nucl_2))
