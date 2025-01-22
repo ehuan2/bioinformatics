@@ -231,6 +231,7 @@ def fit_alignment(nucl_1, nucl_2):
 
     return final_max_score, n1, n2
 
+
 if __name__ == '__main__':
     # first parse for the input file
     parser = argparse.ArgumentParser()
