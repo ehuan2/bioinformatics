@@ -207,6 +207,10 @@ def get_local_alignment(nucl_1, nucl_2):
         dist_arr[0][i] = 0
         backtrack_arr[0][i] = (-1, -1, SequenceStep.END)
 
+    # keep track of what the final score will be
+    coord = None
+    final_max_score = None
+
     # now we need to iterate in the order of (1, 1), (2, 1), (1, 2), (3, 1), (1, 3), (2, 2) where
     # the sum of the coordinates is what's coming up next.
     # we do this all the way until (n, m)
@@ -232,6 +236,10 @@ def get_local_alignment(nucl_1, nucl_2):
                 0
             )
 
+            if coord == None or final_max_score == None or final_max_score < max_score:
+                final_max_score = dist_arr[x][y]
+                coord = (x, y)
+
             dist_arr[x][y] = max_score
 
             if mismatch_cost == max_score:
@@ -250,16 +258,6 @@ def get_local_alignment(nucl_1, nucl_2):
     # now let's create both sequences by following the backtrack matrix
     seq_1 = []
     seq_2 = []
-
-    # first we need to find the highest value in the entire matrix
-    coord = None
-    final_max_score = None
-
-    for i in range(n + 1):
-        for j in range(m + 1):
-            if coord == None or final_max_score == None or final_max_score < dist_arr[i][j]:
-                final_max_score = dist_arr[i][j]
-                coord = (i, j)
 
     # the max number of steps should be n + m
     # keep track of the coordinates of where we are
@@ -315,10 +313,12 @@ if __name__ == '__main__':
     parser.add_argument('--query', required=True)
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--verbose', action='store_true')
+    parser.add_argument('--k', type=int)
     args = parser.parse_args()
 
     DEBUG = args.debug
     VERBOSE = args.verbose
+    k = args.k
 
     database_seq = parse_fasta(args.db)
     query_seq = [value for value in parse_fasta(args.query).values()][0]
@@ -326,9 +326,9 @@ if __name__ == '__main__':
         print(f'Number of database keys: {len(database_seq.keys())}')
 
     # Step 1: Build an inverse index
-    inverse_index = build_inverse_index(database_seq)
+    inverse_index = build_inverse_index(database_seq, k)
     # Step 2: Generate the query k-mers
-    query_kmers = generate_kmers(query_seq)
+    query_kmers = generate_kmers(query_seq, k)
     # Step 3: Get the hits from the inverse index of the query k-mers
     query_hits = get_hits_from_index(inverse_index, query_kmers)
     if DEBUG:
