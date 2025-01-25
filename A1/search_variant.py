@@ -54,7 +54,7 @@ def parse_fasta(input_file):
         input_file (str): Path to the FASTA file.
     
     Returns:
-        seqs (array of dicts): array of dicts of sequence names and sequences
+        seqs (dict): dictionary from the string id to the sequence
     """
     assert os.path.isfile(input_file)
 
@@ -140,7 +140,7 @@ def build_inverse_index(db, k=10, gen_precise=True):
     
     Returns:
         inverse_index (dictionary of string to list of tuples of strings and positions):
-            Maps from kmers to a list of string ids
+            Maps from kmers to a list of tuple of string ids and positions
     """
     # first build the kmers
     inverse_index = {}
@@ -215,6 +215,7 @@ def get_top_sequences(query_hits, k=10):
 
     sequence_list.sort(key=lambda x : x[1], reverse=True)
     return sequence_list[:k]
+
 
 @timing_wrapper
 def get_local_alignment(nucl_1, nucl_2, blast_scoring=False):
@@ -430,6 +431,8 @@ def create_ranges(pos_tuple_list, k=10, k_multiplier=2):
             final_range_list.append(lower_range)
             lower_range = next_range
 
+    final_range_list.append(lower_range)
+
     return final_range_list
 
 
@@ -476,7 +479,7 @@ def get_seq_score(n1, n2, blast_scoring=False):
 
 
 @timing_wrapper
-def get_hsp_alignments(database_seq, query_seq, query_hits, blast_scoring=False, k=10, k_multiplier=2, use_local_alignments=False):
+def get_hsp_alignments(database_seq, query_seq, query_hits, blast_scoring=False, k=10, k_multiplier=2, use_hsp_gapped=False):
     """From a database sequence and list of ids that returns the list of alignments and their scores from HSPs
 
     Args:
@@ -489,7 +492,7 @@ def get_hsp_alignments(database_seq, query_seq, query_hits, blast_scoring=False,
         blast_scoring (bool, defaults to False): Flag to use blast scoring or not
         k (int): The size of the k-mer
         k_multiplier (int): The range to look at for merging. Default is 2.
-        use_local_alignments (bool):
+        use_hsp_gapped (bool):
             Decides whether or not to use gapped extensions and try to calculate the best local alignment
             or simply calculate the range's score. Defaults to False.
 
@@ -511,6 +514,7 @@ def get_hsp_alignments(database_seq, query_seq, query_hits, blast_scoring=False,
         ranges.sort(key=lambda x: x[0][1] - x[0][0], reverse=True)
         if VERBOSE:
             print(ranges)
+            print(pos_tuple_list)
 
         # Run the local alignment on this section against the entire query sequence
         # To ensure best alignments, we should extend the database sequence we look at to be
@@ -520,7 +524,7 @@ def get_hsp_alignments(database_seq, query_seq, query_hits, blast_scoring=False,
         # so we want to make sure that the total length is query_seq_length +- k * k_multiplier
         top_range = ranges[0][0]
         
-        if use_local_alignments:
+        if not use_hsp_gapped:
             length_to_add = query_seq_length - (top_range[1] + k - top_range[0]) + 2 * k * k_multiplier
 
             # and we'll add this length equally if we can, otherwise, skewed one way
@@ -558,9 +562,9 @@ if __name__ == '__main__':
     parser.add_argument('--top_k', type=int, default=10)
     parser.add_argument('--blast_scoring', action='store_true')
     parser.add_argument('--gen_close_match', action='store_true')
-    parser.add_argument('--align_hsp', action='store_true')
+    parser.add_argument('--local_align', action='store_true')
     parser.add_argument('--k_multiplier', type=int, default=2)
-    parser.add_argument('--use_local_alignments', action='store_true')
+    parser.add_argument('--use_hsp_gapped', action='store_true')
     args = parser.parse_args()
 
     DEBUG = args.debug
@@ -569,14 +573,18 @@ if __name__ == '__main__':
     top_k = args.top_k
     blast_scoring = args.blast_scoring
     gen_precise = not args.gen_close_match
-    align_hsp = args.align_hsp
+    local_align = args.local_align
     k_multiplier = args.k_multiplier
-    use_local_alignments = args.use_local_alignments
+    use_hsp_gapped = args.use_hsp_gapped
 
     database_seq = parse_fasta(args.db)
     query_seq = [value for value in parse_fasta(args.query).values()][0]
     if DEBUG:
         print(f'Number of database keys: {len(database_seq.keys())}')
+
+    # reset the k-mer length to be the minimum of the query sequence length and any database sequence length
+    # with it being at least 1 nucleotide long
+    k = max(1, min(len(query_seq), k, min([len(value) for value in database_seq.values()])))
 
     # Step 1: Build an inverse index
     inverse_index = build_inverse_index(database_seq, k, gen_precise)
@@ -586,6 +594,16 @@ if __name__ == '__main__':
     query_hits = get_hits_from_index(inverse_index, query_kmers)
     if DEBUG:
         print(f'Query hits: {len(query_hits)}')
+    if len(query_hits) == 0:
+        # retry if there weren't any query hits the first time by being more flexible
+        inverse_index = build_inverse_index(database_seq, k, False)
+        query_hits = get_hits_from_index(inverse_index, query_kmers)
+
+        if DEBUG:
+            print(f'Query hits: {len(query_hits)}')
+        if len(query_hits) == 0:
+            print(f'No sequences were close at all...')
+            exit()
 
     # Step 4: Aggregate the query hits and sort it based on number of hits, take the topk
     query_hits = get_top_sequences(query_hits, top_k)
@@ -598,7 +616,7 @@ if __name__ == '__main__':
     # database sequence. We will be accomplishing this by 
     
     # A) From the query hits, generate and rank all the scores through local alignments
-    if not align_hsp:
+    if local_align:
         # now let's adjust the query hits just for the sequence id since we're not doing hsp
         query_hits = [seq_id for seq_id, _, _ in query_hits]
         best_scores = get_alignments(database_seq, query_seq, query_hits, blast_scoring)
@@ -613,9 +631,11 @@ if __name__ == '__main__':
             blast_scoring,
             k,
             k_multiplier,
-            use_local_alignments
+            use_hsp_gapped
         )
         print(best_scores[0][1])
 
-    if DEBUG:
+    if VERBOSE:
+        print(f'Order of scoring: {[(hit, score, n1, n2)  for score, hit, n1, n2 in best_scores]}')
+    elif DEBUG:
         print(f'Order of scoring: {[(hit, score)  for score, hit, _, _ in best_scores]}')
