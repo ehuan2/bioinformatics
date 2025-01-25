@@ -179,4 +179,8 @@ We limit top-k because otherwise, there would be too much time taken.\\
 
 Note, this section here is describing what my next steps would be to improve upon the database querying. Just as the previous section, we do indeed construct ranges. This time, we construct ranges by filling in missing gaps where needed to best align the matching sections together. Then, this would run in $O(w)$ for score calculation and $O(nv)$ time for merging the seeds together. The total time would be $O(k(nv + w))$ in this case here, or over the entirety of the dataset, would be $O(n^2v + nw)$.
 
+\newpage
+\section*{Results}
+In terms of the results, I ended up with each of them being able to handle a variety of test cases such as null nucleotide strings or small strings as well as search through the database and report a nucleotide string that was at the top of the results from blast. While not achieving the exact same speed as blast, I did manage to get it down to a couple of minutes depending on top-k. As for the first couple of questions, I did indeed match the expected responses as provided in the assignment.
+
 \end{document}
