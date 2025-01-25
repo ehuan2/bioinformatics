@@ -99,17 +99,16 @@ def print_array(nucl_1, nucl_2, arr):
         print()
 
 
-def generate_kmers(seq, k=10, gen_precise=True, include_pos=True):
+def generate_kmers(seq, k=10, gen_precise=True):
     """Given a nucleotide sequence, generate all k-mers
 
     Args:
         seq (str): String to generate k-mers from
         k (int): Size of k-mer string
         gen_precise (bool): Flag set false if we want to generate the variants to match against
-        include_pos (bool): Flag set to true if we want to include the k-mer positioning information
     
     Returns:
-        Set of all possible kmers
+        Set of all possible kmers and their relative positioning within the sequence
     """
     # the number of k-mers = number of nucleotides from first to last
     # = (l - k) - 0 + 1 = l - k + 1
@@ -123,11 +122,9 @@ def generate_kmers(seq, k=10, gen_precise=True, include_pos=True):
                 for char in ['A', 'T', 'C', 'G']:
                     all_kmers.append(
                         (base_sequence[:j] + char + base_sequence[j + 1:], i)
-                        if include_pos else
-                        base_sequence[:j] + char + base_sequence[j + 1:]
                     )
         else:
-            all_kmers.append((base_sequence, i) if include_pos else base_sequence)
+            all_kmers.append((base_sequence, i))
 
     return all_kmers
 
@@ -142,7 +139,7 @@ def build_inverse_index(db, k=10, gen_precise=True):
         gen_precise (bool): boolean passed to generate_kmers for whether we want to have more matches
     
     Returns:
-        inverse_index (dictionary of string to list of strings):
+        inverse_index (dictionary of string to list of tuples of strings and positions):
             Maps from kmers to a list of string ids
     """
     # first build the kmers
@@ -165,45 +162,59 @@ def get_hits_from_index(inverse_index, query_kmers):
     Args:
         inverse_index (dict of string to tuple of string and int):
             Maps kmers to list of sequences IDs and positions
-        query_kmers (array of strings): The query kmers to search for
+        query_kmers (array of tuple of strings and ids):
+            The query kmers to search over of their string and position ids
 
     Return:
-        seq_ids (set of strings): Unique strings representing all the queries that have received hits
+        seq_ids (list of 4-tuples):
+            All the resulting hits, as 4-tuple, their database sequence id,
+            their positioning in the database sequence,
+            the positioning in the query itself,
+            and finally the actual k-mer itself!
     """
-    hits = set()
-    kmers = set(query_kmers) & set(inverse_index.keys())
-    
-    for kmer in kmers:
-        for seq_id_and_pos in inverse_index[kmer]:
-            hits.add(seq_id_and_pos)
-    
+    hits = []
+
+    for query in query_kmers: 
+        seq, query_pos = query
+
+        if seq not in inverse_index.keys():
+            continue
+        
+        for seq_id, seq_pos in inverse_index[seq]:
+            hits.append((seq_id, seq_pos, query_pos, seq))
+
     return hits
+
 
 @timing_wrapper
 def get_top_sequences(query_hits, k=10):
     """From the query hits, get the top-k sequences based on frequency
 
     Args:
-        query_hits (set of string tuples): List of tuples representing the sequence id and its position
+        query_hits (set of 4-tuples):
+            List of tuples representing the sequence id and its position,
+            the query position and the actual match
         k (int, optional): Top-k. Defaults to 10.
 
     Returns:
-        top_query_hits: The top-k query hits based on frequency.
+        top_query_hits: The top-k query hits based on frequency. It'll be a list of
+        3-tuple, where we have the seq_id, the number of hits,
+        and a list of 3-tuple of the location of hits, the query positioning and the matching sequence
     """
     # for each query hit, let's create an aggregate statistic
     seq_id_mapping = {}
     
-    for seq_id, pos in query_hits:
+    for seq_id, pos, query_pos, seq in query_hits:
         if seq_id not in seq_id_mapping.keys():
             seq_id_mapping[seq_id] = []
-        seq_id_mapping[seq_id].append(pos)
+        seq_id_mapping[seq_id].append((pos, query_pos, seq))
 
     sequence_list = []
     for seq_id in seq_id_mapping.keys():
-        sequence_list.append((seq_id, len(seq_id_mapping[seq_id])))
+        sequence_list.append((seq_id, len(seq_id_mapping[seq_id]), seq_id_mapping[seq_id]))
 
     sequence_list.sort(key=lambda x : x[1], reverse=True)
-    return [seq for seq, _ in sequence_list[:k]]
+    return sequence_list[:k]
 
 @timing_wrapper
 def get_local_alignment(nucl_1, nucl_2, blast_scoring=False):
@@ -339,12 +350,17 @@ def get_alignments(database_seq, query_seq, query_hits, blast_scoring=False):
         database_seq (dictionary): Mapping of seq IDs to sequences
         query_seq (str): Query sequence
         query_hits (array of strings): Array of seq IDs
+        blast_scoring (bool, defaults to False): Flag to use blast scoring or not
 
     Returns:
-        alignments (list of tuples of str ID, string, int): list of tuples of string IDs, the sequence alignment and scores
+        alignments (list of tuples of score, str ID, string, string):
+            1. Score
+            2. String ID database match
+            3. Alignment of the database
+            4. Alignment of the query
     """
     final_scores = []
-    
+
     for hit in query_hits:
         score, n1, n2 = get_local_alignment(database_seq[hit], query_seq, blast_scoring)
         final_scores.append((score, hit, n1, n2))
@@ -354,22 +370,177 @@ def get_alignments(database_seq, query_seq, query_hits, blast_scoring=False):
 
 
 @timing_wrapper
-def get_alignments(database_seq, query_seq, query_hits, blast_scoring=False):
-    """From a database sequence and list of ids that returns the list of alignments and their scores
+def create_ranges(pos_tuple_list, k=10, k_multiplier=2):
+    """Given a list of 3-tuples, merge k-mer matches such that we naturally extend
+    to find the range of k-mers that will be the highest scoring pair
+
+    Args:
+        pos_tuple_list (list of 3-tuples):
+            List of 3-tuples including the db position, the query position and the matching sequence
+        k (int): The size of the k-mer
+        k_multiplier (int): The range to look at for merging. Default is 2.
+
+    Returns:
+        List of 3-tuple, first is a 2-tuple of the range of the db position,
+        second is the 2-tuple of the range of the query position,
+        and the 
+    """
+    
+    # first, we'll create ranges for every single 3-tuple
+    # second, we'll merge these ranges if and only if they are right next to each other
+        # i.e. we merge them one by one
+
+    range_list = []
+    for db_pos, query_pos, _ in pos_tuple_list:
+        # we'll make the ranges [) for easier matching
+        # note that both ranges will be with where the k-mer starts, not where it ends for the latter
+        range_list.append(((db_pos, db_pos + 1), (query_pos, query_pos + 1)))
+
+    # now for each range list we'll sort it based on the db_pos
+    range_list.sort(key=lambda x: x[0][0])
+
+    # now we'll go through constructing the new ranges
+    # we'll do this by setting a lower pointer, and iterating on it while we can still do it
+    # once we can no longer iterate, we add it to the final range list
+    final_range_list = []
+
+    lower_range = range_list[0]
+
+    # we'll only merge if we can do a two-hit seeding
+    def can_merge(r1, r2):
+        r1_db_pos_tuple, r1_query_pos = r1
+        r2_db_pos_tuple, r2_query_pos = r2
+        return (
+            r1_db_pos_tuple[1] + k_multiplier * k >= r2_db_pos_tuple[0] and
+            r1_query_pos[1] + k_multiplier * k >= r2_query_pos[0]
+        )
+
+    def merge_range(r1, r2):
+        r1_db_pos_tuple, r1_query_pos = r1
+        r2_db_pos_tuple, r2_query_pos = r2
+        return (
+            (r1_db_pos_tuple[0], r2_db_pos_tuple[1]),
+            (r1_query_pos[0], r2_query_pos[1])
+        )
+
+    for next_range in range_list[1:]:
+        if can_merge(lower_range, next_range):
+            lower_range = merge_range(lower_range, next_range)
+        else:
+            final_range_list.append(lower_range)
+            lower_range = next_range
+
+    return final_range_list
+
+
+@timing_wrapper
+def get_seq_score(n1, n2, blast_scoring=False):
+    """Given two sequences, n1, n2, return the final score of the two
+
+    Args:
+        n1 (str): The first string
+        n2 (str): The second string
+        blast_scoring (bool, optional):
+            Boolean for whether or not we should use blast scoring.
+            Defaults to False.
+
+    Returns:
+        score:
+            The final score of the alignment of the two.
+            Assumes that they are the same size.
+    """
+    score = 0
+    for i in range(min(len(n1), len(n2))):
+        if n1[i] == '-':
+            score += (
+                (-2 if i - 1 >= 0 and n1[i - 1] == '-' else -5)
+                if blast_scoring else
+                -1
+            )
+        elif n2[i] == '-':
+            score += (
+                (-2 if i - 1 >= 0 and n2[i - 1] == '-' else -5)
+                if blast_scoring else
+                -1
+            )
+        elif n1[i] == n2[i]:
+            score += 2 if blast_scoring else 1
+        elif n1[i] != n2[i]:
+            score += -3 if blast_scoring else -1
+
+    # add gap penalities if need be at the very end
+    if len(n1) != len(n2):
+        score += -5 + (-2) * abs(len(n1) - len(n2) - 1)
+
+    return score
+
+
+@timing_wrapper
+def get_hsp_alignments(database_seq, query_seq, query_hits, blast_scoring=False, k=10, k_multiplier=2, use_local_alignments=False):
+    """From a database sequence and list of ids that returns the list of alignments and their scores from HSPs
 
     Args:
         database_seq (dictionary): Mapping of seq IDs to sequences
         query_seq (str): Query sequence
-        query_hits (array of strings): Array of seq IDs
+        query_hits (array of 3-tuple): See get_top_sequences for more information
+            First is the sequence id
+            Second is the number of matches
+            Third is a list of 3-tuple with db position, query position and sequence itself
         blast_scoring (bool, defaults to False): Flag to use blast scoring or not
+        k (int): The size of the k-mer
+        k_multiplier (int): The range to look at for merging. Default is 2.
+        use_local_alignments (bool):
+            Decides whether or not to use gapped extensions and try to calculate the best local alignment
+            or simply calculate the range's score. Defaults to False.
 
     Returns:
-        alignments (list of tuples of str ID, string, int): list of tuples of string IDs, the sequence alignment and scores
+        alignments (list of tuples of score, str ID, string, string):
+            1. Score
+            2. String ID database match
+            3. Alignment of the database
+            4. Alignment of the query
     """
     final_scores = []
 
-    for hit in query_hits:
-        score, n1, n2 = get_local_alignment(database_seq[hit], query_seq, blast_scoring)
+    for hit, _, pos_tuple_list in query_hits:
+        # now, for each hit that we have, we need to process the tuple list
+        # to find the extension ranges to score on
+        ranges = create_ranges(pos_tuple_list)
+
+        # now, we take our ranges and choose the longest one, and then we find the local alignment
+        ranges.sort(key=lambda x: x[0][1] - x[0][0], reverse=True)
+        if VERBOSE:
+            print(ranges)
+
+        # Run the local alignment on this section against the entire query sequence
+        # To ensure best alignments, we should extend the database sequence we look at to be
+        # at least the length of the query sequence. 
+        query_seq_length = len(query_seq)
+
+        # so we want to make sure that the total length is query_seq_length +- k * k_multiplier
+        top_range = ranges[0][0]
+        
+        if use_local_alignments:
+            length_to_add = query_seq_length - (top_range[1] + k - top_range[0]) + 2 * k * k_multiplier
+
+            # and we'll add this length equally if we can, otherwise, skewed one way
+            lower_bound = max(0, top_range[0] - int(length_to_add / 2))
+            upper_bound = min(len(database_seq[hit]),
+                            top_range[1] + k + int(length_to_add / 2))
+
+            # but this should speed things up significantly as we're looking at a subset of candidates
+            score, n1, n2 = get_local_alignment(
+                database_seq[hit][lower_bound:upper_bound],
+                query_seq,
+                blast_scoring
+            )
+        else:
+            query_seq_range = ranges[0][1]
+            n1 = database_seq[hit][top_range[0]:top_range[1]]
+            n2 = query_seq[query_seq_range[0]:query_seq_range[1]]
+            score = get_seq_score(n1, n2)
+            
+        # then, we add this to the final score and return it
         final_scores.append((score, hit, n1, n2))
 
     final_scores.sort(key=lambda x: x[0], reverse=True)
@@ -386,7 +557,10 @@ if __name__ == '__main__':
     parser.add_argument('--k', type=int, default=10)
     parser.add_argument('--top_k', type=int, default=10)
     parser.add_argument('--blast_scoring', action='store_true')
-    parser.add_argument('--gen_precise', action='store_false')
+    parser.add_argument('--gen_close_match', action='store_true')
+    parser.add_argument('--align_hsp', action='store_true')
+    parser.add_argument('--k_multiplier', type=int, default=2)
+    parser.add_argument('--use_local_alignments', action='store_true')
     args = parser.parse_args()
 
     DEBUG = args.debug
@@ -394,7 +568,10 @@ if __name__ == '__main__':
     k = args.k
     top_k = args.top_k
     blast_scoring = args.blast_scoring
-    gen_precise = args.gen_precise
+    gen_precise = not args.gen_close_match
+    align_hsp = args.align_hsp
+    k_multiplier = args.k_multiplier
+    use_local_alignments = args.use_local_alignments
 
     database_seq = parse_fasta(args.db)
     query_seq = [value for value in parse_fasta(args.query).values()][0]
@@ -404,7 +581,7 @@ if __name__ == '__main__':
     # Step 1: Build an inverse index
     inverse_index = build_inverse_index(database_seq, k, gen_precise)
     # Step 2: Generate the query k-mers
-    query_kmers = generate_kmers(query_seq, k, include_pos=False)
+    query_kmers = generate_kmers(query_seq, k)
     # Step 3: Get the hits from the inverse index of the query k-mers
     query_hits = get_hits_from_index(inverse_index, query_kmers)
     if DEBUG:
@@ -413,11 +590,32 @@ if __name__ == '__main__':
     # Step 4: Aggregate the query hits and sort it based on number of hits, take the topk
     query_hits = get_top_sequences(query_hits, top_k)
     if DEBUG:
-        print(f'Top-k hits based on matches is: {query_hits}')
+        print(f'Top-k hits based on matches is: {[seq_id for seq_id, _, _ in query_hits]}')
     
-    # Step 5: From the query hits, generate and rank all the scores
-    best_scores = get_alignments(database_seq, query_seq, query_hits, blast_scoring)
-    print(best_scores[0][1])
+    # Step 5: Here we branch off into two alternative methods.
+    # The first will be to use q2 as a subroutine, and simply run the alignments from the query hits
+    # The second will be to use the HSPs. This one is a bit more complicated as we have multiple HSPs per
+    # database sequence. We will be accomplishing this by 
+    
+    # A) From the query hits, generate and rank all the scores through local alignments
+    if not align_hsp:
+        # now let's adjust the query hits just for the sequence id since we're not doing hsp
+        query_hits = [seq_id for seq_id, _, _ in query_hits]
+        best_scores = get_alignments(database_seq, query_seq, query_hits, blast_scoring)
+        print(best_scores[0][1])
+
+    # B) From the query hits, generate and rank all the scores through HSPs, which should be a lot faster
+    else:
+        best_scores = get_hsp_alignments(
+            database_seq,
+            query_seq,
+            query_hits,
+            blast_scoring,
+            k,
+            k_multiplier,
+            use_local_alignments
+        )
+        print(best_scores[0][1])
 
     if DEBUG:
         print(f'Order of scoring: {[(hit, score)  for score, hit, _, _ in best_scores]}')
