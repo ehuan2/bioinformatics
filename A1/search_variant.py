@@ -99,39 +99,47 @@ def print_array(nucl_1, nucl_2, arr):
         print()
 
 
-def generate_kmers(seq, k=10, gen_precise=True):
+def generate_kmers(seq, k=10, gen_precise=True, include_pos=True):
     """Given a nucleotide sequence, generate all k-mers
 
     Args:
         seq (str): String to generate k-mers from
+        k (int): Size of k-mer string
+        gen_precise (bool): Flag set false if we want to generate the variants to match against
+        include_pos (bool): Flag set to true if we want to include the k-mer positioning information
     
     Returns:
         Set of all possible kmers
     """
     # the number of k-mers = number of nucleotides from first to last
     # = (l - k) - 0 + 1 = l - k + 1
-    all_kmers = set()
+    all_kmers = []
     
     for i in range(len(seq) - k + 1):
         # we'll perform a naive approach and add all possible kmers, instead of pattern matching later
-        for j in range(k):
-            base_sequence = seq[i:i+k]
-            if gen_precise:
-                all_kmers.add(base_sequence)
-            else:
+        base_sequence = seq[i:i+k]
+        if not gen_precise:
+            for j in range(k):
                 for char in ['A', 'T', 'C', 'G']:
-                    all_kmers.add(base_sequence[:j] + char + base_sequence[j + 1:])
+                    all_kmers.append(
+                        (base_sequence[:j] + char + base_sequence[j + 1:], i)
+                        if include_pos else
+                        base_sequence[:j] + char + base_sequence[j + 1:]
+                    )
+        else:
+            all_kmers.append((base_sequence, i) if include_pos else base_sequence)
 
     return all_kmers
 
 
 @timing_wrapper
-def build_inverse_index(db, k=10):
+def build_inverse_index(db, k=10, gen_precise=True):
     """Given a database of sequences, index its kmers
 
     Args:
         db (array of dicts): Array of dictionaries
         k (int): Size of k-mer
+        gen_precise (bool): boolean passed to generate_kmers for whether we want to have more matches
     
     Returns:
         inverse_index (dictionary of string to list of strings):
@@ -141,13 +149,11 @@ def build_inverse_index(db, k=10):
     inverse_index = {}
 
     for seq_id, seq in db.items():
-        kmers = generate_kmers(seq, k, gen_precise=True)
-        for kmer in kmers:
-            if kmer in inverse_index.keys():
-                inverse_index[kmer].add(seq_id)
-            else:
-                inverse_index[kmer] = set()
-                inverse_index[kmer].add(seq_id)
+        kmers = generate_kmers(seq, k, gen_precise)
+        for kmer, pos in kmers:
+            if kmer not in inverse_index.keys():
+                inverse_index[kmer] = []
+            inverse_index[kmer].append((seq_id, pos))
     
     return inverse_index
 
@@ -157,7 +163,8 @@ def get_hits_from_index(inverse_index, query_kmers):
     """Return the hits of our query kmers by giving the keys from the inverse index
 
     Args:
-        inverse_index (dict of string to string): Maps kmers to list of sequences IDs
+        inverse_index (dict of string to tuple of string and int):
+            Maps kmers to list of sequences IDs and positions
         query_kmers (array of strings): The query kmers to search for
 
     Return:
@@ -167,19 +174,45 @@ def get_hits_from_index(inverse_index, query_kmers):
     kmers = set(query_kmers) & set(inverse_index.keys())
     
     for kmer in kmers:
-        for seq_id in inverse_index[kmer]:
-            hits.add(seq_id)
+        for seq_id_and_pos in inverse_index[kmer]:
+            hits.add(seq_id_and_pos)
     
     return hits
 
+@timing_wrapper
+def get_top_sequences(query_hits, k=10):
+    """From the query hits, get the top-k sequences based on frequency
+
+    Args:
+        query_hits (set of string tuples): List of tuples representing the sequence id and its position
+        k (int, optional): Top-k. Defaults to 10.
+
+    Returns:
+        top_query_hits: The top-k query hits based on frequency.
+    """
+    # for each query hit, let's create an aggregate statistic
+    seq_id_mapping = {}
+    
+    for seq_id, pos in query_hits:
+        if seq_id not in seq_id_mapping.keys():
+            seq_id_mapping[seq_id] = []
+        seq_id_mapping[seq_id].append(pos)
+
+    sequence_list = []
+    for seq_id in seq_id_mapping.keys():
+        sequence_list.append((seq_id, len(seq_id_mapping[seq_id])))
+
+    sequence_list.sort(key=lambda x : x[1], reverse=True)
+    return [seq for seq, _ in sequence_list[:k]]
 
 @timing_wrapper
-def get_local_alignment(nucl_1, nucl_2):
+def get_local_alignment(nucl_1, nucl_2, blast_scoring=False):
     """Returns the best local alignment and its score between two nucleotide sequences
 
     Args:
         nucl_1 (str): First nucleotide sequence
         nucl_2 (str): Second nucleotide sequence
+        blast_scoring (bool, default to False): Flag to use blast n scoring or not
     
     Return:
         score: The final alignment score
@@ -224,10 +257,24 @@ def get_local_alignment(nucl_1, nucl_2):
             
             # now we take the maximal edit distance by simply penalizing it if it's wrong
             # n?_take_cost means the cost of choosing a gap in the opposite string and choosing this string
-            n1_take_cost = dist_arr[x - 1][y] - 1
-            n2_take_cost = dist_arr[x][y - 1] - 1
+            n1_take_cost = dist_arr[x - 1][y] + (
+                # penalize the gap extension less than the gap opening
+                (-2 if backtrack_arr[x - 1][y][2] == SequenceStep.N1_TAKE else -5)
+                if blast_scoring else
+                -1
+            )
+            n2_take_cost = dist_arr[x][y - 1] + (
+                # penalize the gap extension less than the gap opening
+                (-2 if backtrack_arr[x][y - 1][2] == SequenceStep.N1_TAKE else -5)
+                if blast_scoring else
+                -1
+            )
             # mismatch cost means the cost of matching them up, rewarding +1 if it matches, -1 otherwise
-            mismatch_cost = dist_arr[x - 1][y - 1] + (1 if nucl_1[x - 1] == nucl_2[y - 1] else -1)
+            mismatch_cost = dist_arr[x - 1][y - 1] + (
+                (2 if blast_scoring else 1)
+                if nucl_1[x - 1] == nucl_2[y - 1] else
+                (-3 if blast_scoring else -1)
+            )
 
             max_score = max(
                 n1_take_cost,
@@ -237,7 +284,7 @@ def get_local_alignment(nucl_1, nucl_2):
             )
 
             if coord == None or final_max_score == None or final_max_score < max_score:
-                final_max_score = dist_arr[x][y]
+                final_max_score = max_score
                 coord = (x, y)
 
             dist_arr[x][y] = max_score
@@ -285,7 +332,7 @@ def get_local_alignment(nucl_1, nucl_2):
 
 
 @timing_wrapper
-def get_alignments(database_seq, query_seq, query_hits):
+def get_alignments(database_seq, query_seq, query_hits, blast_scoring=False):
     """From a database sequence and list of ids that returns the list of alignments and their scores
 
     Args:
@@ -299,7 +346,30 @@ def get_alignments(database_seq, query_seq, query_hits):
     final_scores = []
     
     for hit in query_hits:
-        score, n1, n2 = get_local_alignment(database_seq[hit], query_seq)
+        score, n1, n2 = get_local_alignment(database_seq[hit], query_seq, blast_scoring)
+        final_scores.append((score, hit, n1, n2))
+
+    final_scores.sort(key=lambda x: x[0], reverse=True)
+    return final_scores
+
+
+@timing_wrapper
+def get_alignments(database_seq, query_seq, query_hits, blast_scoring=False):
+    """From a database sequence and list of ids that returns the list of alignments and their scores
+
+    Args:
+        database_seq (dictionary): Mapping of seq IDs to sequences
+        query_seq (str): Query sequence
+        query_hits (array of strings): Array of seq IDs
+        blast_scoring (bool, defaults to False): Flag to use blast scoring or not
+
+    Returns:
+        alignments (list of tuples of str ID, string, int): list of tuples of string IDs, the sequence alignment and scores
+    """
+    final_scores = []
+
+    for hit in query_hits:
+        score, n1, n2 = get_local_alignment(database_seq[hit], query_seq, blast_scoring)
         final_scores.append((score, hit, n1, n2))
 
     final_scores.sort(key=lambda x: x[0], reverse=True)
@@ -313,12 +383,18 @@ if __name__ == '__main__':
     parser.add_argument('--query', required=True)
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--verbose', action='store_true')
-    parser.add_argument('--k', type=int)
+    parser.add_argument('--k', type=int, default=10)
+    parser.add_argument('--top_k', type=int, default=10)
+    parser.add_argument('--blast_scoring', action='store_true')
+    parser.add_argument('--gen_precise', action='store_false')
     args = parser.parse_args()
 
     DEBUG = args.debug
     VERBOSE = args.verbose
     k = args.k
+    top_k = args.top_k
+    blast_scoring = args.blast_scoring
+    gen_precise = args.gen_precise
 
     database_seq = parse_fasta(args.db)
     query_seq = [value for value in parse_fasta(args.query).values()][0]
@@ -326,16 +402,21 @@ if __name__ == '__main__':
         print(f'Number of database keys: {len(database_seq.keys())}')
 
     # Step 1: Build an inverse index
-    inverse_index = build_inverse_index(database_seq, k)
+    inverse_index = build_inverse_index(database_seq, k, gen_precise)
     # Step 2: Generate the query k-mers
-    query_kmers = generate_kmers(query_seq, k)
+    query_kmers = generate_kmers(query_seq, k, include_pos=False)
     # Step 3: Get the hits from the inverse index of the query k-mers
     query_hits = get_hits_from_index(inverse_index, query_kmers)
     if DEBUG:
         print(f'Query hits: {len(query_hits)}')
 
-    # Step 4: From the query hits, generate and rank all the scores
-    best_scores = get_alignments(database_seq, query_seq, query_hits)
+    # Step 4: Aggregate the query hits and sort it based on number of hits, take the topk
+    query_hits = get_top_sequences(query_hits, top_k)
+    if DEBUG:
+        print(f'Top-k hits based on matches is: {query_hits}')
+    
+    # Step 5: From the query hits, generate and rank all the scores
+    best_scores = get_alignments(database_seq, query_seq, query_hits, blast_scoring)
     print(best_scores[0][1])
 
     if DEBUG:
