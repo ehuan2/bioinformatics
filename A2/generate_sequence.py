@@ -7,8 +7,10 @@ import datetime
 import os
 import random
 
-def gen_random_seq(seq_length):
+def gen_random_seq(seq_length, ambiguous):
     chars = ['A', 'T', 'C', 'G']
+    if ambiguous:
+        chars.extend(['W', 'S', 'M', 'K', 'R', 'Y', 'B', 'D', 'H', 'V', 'N'])
     return "".join(random.choice(chars) for _ in range(seq_length))
 
 
@@ -19,6 +21,7 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--num_sequences', type=int, required=True)
     parser.add_argument('-l', '--sequence_lengths', nargs='+', type=int, required=True)
     parser.add_argument('-o', '--output_dir', type=str)
+    parser.add_argument('-a', '--ambiguous', action='store_true', help='Include ambiguous characters')
     args = parser.parse_args()
 
     num_sequences = args.num_sequences
@@ -41,8 +44,8 @@ if __name__ == '__main__':
             
             with open(output_file_path, 'w') as output_file:
                 output_file.write(f'>seq{i}\n')
-                output_file.write(gen_random_seq(sequence_lengths[i]))
+                output_file.write(gen_random_seq(sequence_lengths[i], args.ambiguous))
                 output_file.write('\n')
         else:
             print(f'>seq{i}')
-            print(gen_random_seq(sequence_lengths[i]))
+            print(gen_random_seq(sequence_lengths[i], args.ambiguous))

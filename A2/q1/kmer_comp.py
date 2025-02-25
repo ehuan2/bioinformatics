@@ -24,6 +24,7 @@ from Bio import SeqIO
 from typing import List
 import argparse
 import logging
+import math
 import os
 import sys
 
@@ -178,11 +179,13 @@ if __name__ == '__main__':
     seq = get_sequence(input_file)
     kmer_frequency = get_kmer_frequency_array(seq, k)
 
+    assert k <= len(seq), 'Cannot have a k-mer that is larger than the sequence'
+
     if args.output_dir and not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
 
     output_file_path = (
-        os.path.join(args.output_dir, f'{os.path.basename(input_file)}_k-mers.txt')
+        os.path.join(args.output_dir, f'{os.path.basename(input_file)}_len_{k}_k-mers.txt')
         if args.output_dir else
         'k-mers.txt'
     )
@@ -195,5 +198,5 @@ if __name__ == '__main__':
         total_freq = 0
         for freq in kmer_frequency:
             total_freq += freq
-        assert total_freq == len(seq) - k + 1 # the total frequency should be n - k + 1
+        assert math.isclose(total_freq, len(seq) - k + 1) # the total frequency should be n - k + 1
         logging.debug('Total frequency matches properly!')
