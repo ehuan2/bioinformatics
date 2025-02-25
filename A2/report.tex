@@ -4,6 +4,7 @@
 \usepackage{amsfonts}
 \usepackage{subfig}
 \usepackage{listings}
+\usepackage{hyperref}
 
 \setlength{\oddsidemargin}{27mm}
 \setlength{\evensidemargin}{27mm}
@@ -38,12 +39,27 @@
  \end{center}
 
 \begin{abstract}
-  \noindent This assignment here is meant to analyze and showcase the power of dynamic programming and the relevant sequence alignment programs.
+  \noindent This assignment was an exercise in phylogeny, alignment-free methods and genome assembly.
 \end{abstract}
 \section*{Setup}
-I used Python 3.8.10 in this run without any external dependencies besides the regular Python library dependencies.
+I used Python 3.10.12 on the student server machines in this run with external dependencies described in `requirements.txt'. Run `pip install requirements.txt' for proper setup.
 
-\section*{Part 1: Edit Distance}
+\section*{Part 1: K-mer Composition}
+All code and examples are found under `q1/'. This problem was tackled in a $O(nk)$ runtime where we had the following strategy:
 
+\begin{enumerate}
+  \item Grab the sequence using the \href{https://biopython.org/wiki/SeqIO}{BioPython}.
+  \item Calculate the k-mer frequency array by iterating over all k-substrings (running $n - k + 1$ times with the length of the sequence being $n$).
+  \begin{itemize}
+    \item For each k-mer, we generate all possible k-mers, e.g.: `NA' will produce `AA', `CA', `GA', `TA'.
+    \item We do this by iterating through each k-mer string one nucleotide at a time and keeping all possible k-mer prefixes. We extend each prefix by the possible next nucleotide base according to \href{https://en.wikipedia.org/wiki/Nucleic_acid_notation}{IUPAC notation}. This process takes $O(nk)$ times because we have $O(n)$ possible k-mers which we spend $O(k)$ time reconstructing all possible k-mers.
+    \item Taking the total k-mers possible, weigh each possible string equally across each k-mer. Add this weight to a k-mer frequency array whose index is defined as mapping of the possible kmer string to its lexicographic index in the $4^k$ frequency matrix. This can be easily found by setting the weights of A to 0, C to 1, G to 2, T to 3 and then turning the string (alias of base 4) to base 10.
+  \end{itemize}
+  \item Return and print out to a file as needed.
+\end{enumerate}
+
+Run the code with the following line: `$\text{python kmer\_comp.py -i }<\text{input\_file}>\text{ -k }<\text{kmer-length}>$' with optional flags of `-o $<$output\_dir$>$' to output to the file under `$<$output\_dir$>$/$<$input\_file\_name$>$\_len\_$<$k-mer\_length$>$\_k-mers.txt' and `$--debug$' for more logging information.\\
+
+I decided to use this method of averaging over the possible k-mers for ambiguous bases, i.e. if we have `NA' we give 0.25 frequency weights to `AA', `CA', `GA', `TA'. This assumes that given an ambiguous base, that there is equal chance of any base that represents it to be the true base. This might not necessarily be true, but is the best way to utilize the heuristic of the ambiguous base given.
 
 \end{document}
