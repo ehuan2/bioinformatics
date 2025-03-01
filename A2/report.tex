@@ -62,4 +62,15 @@ Run the code with the following line: `$\text{python kmer\_comp.py -i }<\text{in
 
 I decided to use this method of averaging over the possible k-mers for ambiguous bases, i.e. if we have `NA' we give 0.25 frequency weights to `AA', `CA', `GA', `TA'. This assumes that given an ambiguous base, that there is equal chance of any base that represents it to be the true base. This might not necessarily be true, but is the best way to utilize the heuristic of the ambiguous base given.
 
+\section*{Part 2: deBruijn Graph Construction}
+All code and examples are found under `q2/'. This problem was tackled in a $O(nk \log n)$ runtime with the following strategy, where $n$ is the number of strings, $k$ is the length of the strings:
+\begin{enumerate}
+  \item Calculate the reverse complements of all the strings, taking $O(nk)$ time.
+  \item Calculate the edge list, taking $O(nk)$ time of the joint set of the given set and the reverse complements.
+  \item Return the sorted list, taking $O(k)$ time in comparison and needing $O(n \log n)$ comparisons, or done in $O(n k \log n)$ time.
+\end{enumerate}
+
+Run the code with the following line: `$\text{python build\_deBruijn.py -i }<\text{input\_file}>$' with optional flags of `-o $<$output\_dir$>$' to output to the file under `$<$output\_dir$>$/$<$input\_file\_name$>$\_deBruijn.txt' and `$--debug$' for more logging information.
+
+
 \end{document}
