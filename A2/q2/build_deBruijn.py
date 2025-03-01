@@ -10,10 +10,10 @@ the nodes, and then the ...
 """
 
 from Bio import SeqIO
+from Bio.Seq import Seq
 from typing import List
 import argparse
 import logging
-import math
 import os
 import sys
 
@@ -39,7 +39,7 @@ def get_sequences(input_file) -> List[str]:
 
     return sequences
 
-
+'''
 def get_reverse_complements(seqs: List[str]) -> List[str]:
     """Given a list of sequences, get the list of reverse complements
 
@@ -64,14 +64,25 @@ def get_reverse_complements(seqs: List[str]) -> List[str]:
         logging.debug(f'Reverse complement of {seq} is {next_seq}')
         reverse_complements.append(next_seq)
     return reverse_complements
+'''
+def get_reverse_complements(seqs: List[Seq]) -> List[Seq]:
+    """Given a list of sequences, get the list of reverse complements
+
+    Args:
+        seqs (List[Seq]): List of sequences
+
+    Returns:
+        List[Seq]: list of reverse complements
+    """
+    return [seq.reverse_complement() for seq in seqs]
 
 
-def get_debruijn_edges(seqs: List[str]) -> List[tuple]:
+def get_debruijn_edges(seqs: List[Seq]) -> List[tuple]:
     """Given a list of (k+1)-mers that represent edges, return the adjacency list
     of the nodes which are the corresponding k-mers.
 
     Args:
-        seqs (List[str]): List of strings.
+        seqs (List[Seq]): List of strings.
 
     Returns:
         List[tuple]: List of output tuples representing the adjacency list, in sorted order.
@@ -125,3 +136,8 @@ if __name__ == '__main__':
     with open(output_file_path, 'w') as output_file:
         for edge in debruijn_edges:
             output_file.write(f'({edge[0]}, {edge[1]})\n')
+            
+            # good check when debug
+            if args.debug:
+                assert len(edge[0]) == len(edge[1])
+                assert len(edge[0]) == len(seqs[0]) - 1
