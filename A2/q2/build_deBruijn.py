@@ -141,3 +141,8 @@ if __name__ == '__main__':
             if args.debug:
                 assert len(edge[0]) == len(edge[1])
                 assert len(edge[0]) == len(seqs[0]) - 1
+        
+        if args.debug:
+            # must be at most the number of sequences + reverse complements there are
+            assert len(debruijn_edges) <= len(seqs)
+            logging.debug('Number of edges is valid')
