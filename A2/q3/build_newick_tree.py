@@ -144,8 +144,6 @@ def build_tree(seqs: List[SeqRecord], dist_fn, kmer_len):
         for i in range(len(frequency_vecs))
     ]
 
-    logging.debug(distance_matrix)
-
     # finally, we actually build the upgma tree
     return build_upgma_tree(labels, distance_matrix)
 
@@ -172,7 +170,7 @@ def cosine_similarity(vec1, vec2):
     # this can be done easily by doing 1 / cosine_similarity - 1
 
     # In this case, we should with some small epsilon to prevent divide by 0
-    return 1 / (cosine_sim + np.finfo(float).eps) - 1
+    return 1 / (cosine_sim + np.finfo(float).eps if cosine_sim == 0 else cosine_sim) - 1
 
 
 def pearson_correlation(vec1, vec2):
@@ -193,7 +191,7 @@ def pearson_correlation(vec1, vec2):
     # we can do this by using (1 - pearson) / (1 + pearson) by noting that
     # if pearson = -1, then we have \infty and if pearson = 1, then we have 0
     # if pearson = 0, then we have a distance of 1
-    return (1 - pearson_corr) / (1 + pearson_corr)
+    return (1 - pearson_corr) / (1 + pearson_corr + np.finfo(float).eps if pearson_corr == -1 else 1 + pearson_corr)
 
 
 if __name__ == '__main__':
@@ -218,15 +216,35 @@ if __name__ == '__main__':
     if args.output_dir and not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
 
+    # first do the viral only analysis, i.e. the analysis without the candidate
+    output_dir = args.output_dir if args.output_dir else './'
+    viral_only_dir = os.path.join(output_dir, 'viral_only_trees/')
+    if not os.path.exists(viral_only_dir):
+        os.makedirs(viral_only_dir)
+
     # first iterate by finding the upgma trees for viral seqs only
     dist_fns = [euclidean_distance, cosine_similarity, pearson_correlation]
 
+    map_dist_fn_to_filename = {
+        euclidean_distance.__name__: 'Euclidean.nwk',
+        cosine_similarity.__name__: 'Cosine.nwk',
+        pearson_correlation.__name__: 'Pearson.nwk',
+    }
+
     for dist_fn in dist_fns:
         viral_tree = build_tree(seqs, dist_fn, args.kmer_len)
-        Phylo.write(viral_tree, f"{dist_fn.__name__}_viral_only.txt", "newick")
+        Phylo.write(
+            viral_tree,
+            os.path.join(viral_only_dir, map_dist_fn_to_filename[dist_fn.__name__]),
+            "newick"
+        )
 
     # reiterate by finding the upgma trees for everything together
     seqs.append(candidate_seq)
     for dist_fn in dist_fns:
-        euclidean_all_seqs_tree = build_tree(seqs, dist_fn, args.kmer_len)
-        Phylo.write(viral_tree, f"{dist_fn.__name__}.txt", "newick")
+        viral_tree = build_tree(seqs, dist_fn, args.kmer_len)
+        Phylo.write(
+            viral_tree,
+            os.path.join(output_dir, map_dist_fn_to_filename[dist_fn.__name__]),
+            "newick"
+        )
