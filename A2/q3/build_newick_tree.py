@@ -129,22 +129,22 @@ def build_tree(seqs: List[SeqRecord], dist_fn, kmer_len):
     """
     logging.debug(f'Building a tree for seqs: {[seq.id for seq in seqs]}, {dist_fn.__name__}')
     
-    # first we consider processing the sequences and grabbing their k-mer frequency vectors
+    # first we consider processing the sequences and grabbing their k-mer frequency vectors from q1
     labels = [seq.id for seq in seqs]
     frequency_vecs = [
         get_kmer_frequency_array(seq.seq, kmer_len)
         for seq in seqs
     ]
 
-    # next, we take these frequency vectors and generate distance matrices
-    # according to: https://github.com/biopython/biopython/blob/master/Bio/Phylo/TreeConstruction.py
+    # next, we take these frequency vectors and generate distance matrices with our dist_fn
+    # note: according to https://github.com/biopython/biopython/blob/master/Bio/Phylo/TreeConstruction.py
     # we need to build the lower triangular matrix
     distance_matrix = [
         [dist_fn(frequency_vecs[i], frequency_vecs[j]) for j in range(i + 1)]
         for i in range(len(frequency_vecs))
     ]
 
-    # finally, we actually build the upgma tree
+    # finally, we actually build the upgma tree, given the labels
     return build_upgma_tree(labels, distance_matrix)
 
 
@@ -217,9 +217,11 @@ if __name__ == '__main__':
     input_viral_file = args.input_viral_file
     input_candidate_file = args.input_candidate_file
 
+    # First grab the viral sequences
     seqs = download_viral_seqs(input_viral_file)
     candidate_seq = get_sequences(input_candidate_file)[0]
 
+    # next handle the output directories
     # handle the output directory location
     if args.output_dir and not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
@@ -239,6 +241,7 @@ if __name__ == '__main__':
         pearson_correlation.__name__: 'Pearson.nwk',
     }
 
+    # finally, iterate over all distance functions and calculate the upgma tree
     for dist_fn in dist_fns:
         viral_tree = build_tree(seqs, dist_fn, args.kmer_len)
         Phylo.write(
