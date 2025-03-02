@@ -10,7 +10,7 @@ which represents a candidate viral sequence to output a separate UPGMA tree
 based on these methods.
 """
 
-from Bio import SeqIO, Phylo
+from Bio import SeqIO, Phylo, Entrez
 from Bio.SeqRecord import SeqRecord
 from Bio.Phylo.TreeConstruction import DistanceMatrix, DistanceTreeConstructor
 from kmer_comp import get_kmer_frequency_array
@@ -22,6 +22,67 @@ import os
 import sys
 
 
+def download_viral_seqs(input_file_path: str) -> List[SeqRecord]:
+    """Parses the input file path to get the list of fasta sequences.
+
+    Args:
+        input_file_path (str): Path to input file.
+
+    Returns:
+        List[SeqRecord]: The list of fasta sequences
+    """
+    
+    viral_ids = []
+    with open(input_file_path, 'r') as input_file:
+        for line in input_file:
+            # remove the first part before the colon, and split again, and remove
+            # any whitespaces after that
+            viral_ids.extend([
+                viral_id.strip()
+                for viral_id in line.split(':')[1].split(',')
+            ])
+
+    viral_dir = './viral_logs/'
+
+    if not os.path.exists(viral_dir):
+        os.makedirs(viral_dir)
+
+    # now for each viral sequence, we get the https://bioperl.org/formats/sequence_formats/GenBank_sequence_format
+    # genbank format first, then we parse this using BioPython again
+    # to get the final sequence record
+    for viral_id in viral_ids:
+        viral_file_path = os.path.join(viral_dir, f'{viral_id}.gb')
+        if os.path.exists(viral_file_path):
+            logging.debug(f'{viral_file_path} is cached!')
+            continue
+
+        Entrez.email = 'e48huang@uwaterloo.ca'
+        handle = Entrez.efetch(
+            db="nucleotide",
+            id=viral_id,
+            rettype='gb',
+            retmode='text'
+        )
+        
+        with open(viral_file_path, 'w') as viral_file:
+            viral_file.write(handle.read())
+            logging.debug(f'Finish downloading {viral_id} to {viral_file_path}')
+
+    # now we parse through all the files and get the sequences as we need
+    sequences = []
+
+    for viral_id in viral_ids:
+        viral_file_path = os.path.join(viral_dir, f'{viral_id}.gb')
+        # parse the FASTA file
+        with open(viral_file_path, 'r') as handle:
+            # Parse the FASTA file
+            for record in SeqIO.parse(handle, 'gb'):
+                logging.debug(f'Record id: {record.id}')
+                sequences.append(record)
+
+    return sequences
+
+
 def get_sequences(input_file) -> List[SeqRecord]:
     """Parses the input file path to get the list of fasta sequences.
 
@@ -29,7 +90,7 @@ def get_sequences(input_file) -> List[SeqRecord]:
         input_file (str): Path to input file.
 
     Returns:
-        List[str]: The list of fasta sequences
+        List[SeqRecord]: The list of fasta sequence records
     """
     sequences = []
 
@@ -37,7 +98,7 @@ def get_sequences(input_file) -> List[SeqRecord]:
     with open(input_file, 'r') as handle:
         # Parse the FASTA file
         for record in SeqIO.parse(handle, 'fasta'):
-            logging.debug(f'Record id: {record.id}, sequence: {record.seq}')
+            logging.debug(f'Record id: {record.id}')
             # return the first sequence we get
             sequences.append(record)
 
@@ -57,7 +118,7 @@ def build_upgma_tree(labels, distance_matrix):
     return upgmatree
 
 
-def build_tree(seqs: List[SeqRecord], dist_fn):
+def build_tree(seqs: List[SeqRecord], dist_fn, kmer_len):
     """Given a list of sequence records, build the UPGMA trees.
 
     Args:
@@ -66,15 +127,24 @@ def build_tree(seqs: List[SeqRecord], dist_fn):
     
     Returns: Returns the UPGMA tree based on the distance function and a list of sequences.
     """
+    logging.debug(f'Building a tree for seqs: {[seq.id for seq in seqs]}, {dist_fn.__name__}')
     
     # first we consider processing the sequences and grabbing their k-mer frequency vectors
     labels = [seq.id for seq in seqs]
-    frequency_vecs = [get_kmer_frequency_array(seq.seq) for seq in seqs]
+    frequency_vecs = [
+        get_kmer_frequency_array(seq.seq, kmer_len)
+        for seq in seqs
+    ]
 
     # next, we take these frequency vectors and generate distance matrices
     # according to: https://github.com/biopython/biopython/blob/master/Bio/Phylo/TreeConstruction.py
     # we need to build the lower triangular matrix
-    distance_matrix = [[dist_fn(frequency_vecs[i], frequency_vecs[j]) for j in range(i + 1)] for i in range(frequency_vecs)]
+    distance_matrix = [
+        [dist_fn(frequency_vecs[i], frequency_vecs[j]) for j in range(i + 1)]
+        for i in range(len(frequency_vecs))
+    ]
+
+    logging.debug(distance_matrix)
 
     # finally, we actually build the upgma tree
     return build_upgma_tree(labels, distance_matrix)
@@ -128,9 +198,10 @@ def pearson_correlation(vec1, vec2):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input_viral_file', required=True, help='Input viral sequences FASTA file path')
+    parser.add_argument('-i', '--input_viral_file', required=True, help='Input viral sequences text file path, writes to ./viral_seqs/')
     parser.add_argument('-c', '--input_candidate_file', required=True, help='Input candidate sequence FASTA file path')
     parser.add_argument('-o', '--output_dir', help='Output directory, which if set will write everything to there')
+    parser.add_argument('-k', '--kmer_len', default=4, type=int, help='The kmer length')
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
 
@@ -140,7 +211,7 @@ if __name__ == '__main__':
     input_viral_file = args.input_viral_file
     input_candidate_file = args.input_candidate_file
 
-    seqs = get_sequences(input_viral_file)
+    seqs = download_viral_seqs(input_viral_file)
     candidate_seq = get_sequences(input_candidate_file)[0]
 
     # handle the output directory location
@@ -148,21 +219,14 @@ if __name__ == '__main__':
         os.makedirs(args.output_dir)
 
     # first iterate by finding the upgma trees for viral seqs only
-    euclidean_viral_tree = build_tree(seqs, euclidean_distance)
-    cosine_viral_tree = build_tree(seqs, cosine_similarity)
-    pearson_viral_tree = build_tree(seqs, pearson_correlation)
+    dist_fns = [euclidean_distance, cosine_similarity, pearson_correlation]
+
+    for dist_fn in dist_fns:
+        viral_tree = build_tree(seqs, dist_fn, args.kmer_len)
+        Phylo.write(viral_tree, f"{dist_fn.__name__}_viral_only.txt", "newick")
 
     # reiterate by finding the upgma trees for everything together
     seqs.append(candidate_seq)
-    euclidean_all_seqs_tree = build_tree(seqs, euclidean_distance)
-    cosine_all_seqs_tree = build_tree(seqs, cosine_similarity)
-    pearson_all_seqs_tree = build_tree(seqs, pearson_correlation)
-
-    # finally print them all out!
-    Phylo.write(euclidean_viral_tree, "euclidean_viral.txt", "newick")
-    Phylo.write(cosine_viral_tree, "cosine_viral.txt", "newick")
-    Phylo.write(pearson_viral_tree, "pearson_viral.txt", "newick")
-
-    Phylo.write(euclidean_all_seqs_tree, "Euclidean.txt", "newick")
-    Phylo.write(cosine_all_seqs_tree, "Cosine.txt", "newick")
-    Phylo.write(pearson_all_seqs_tree, "Pearson.txt", "newick")
+    for dist_fn in dist_fns:
+        euclidean_all_seqs_tree = build_tree(seqs, dist_fn, args.kmer_len)
+        Phylo.write(viral_tree, f"{dist_fn.__name__}.txt", "newick")
