@@ -144,7 +144,6 @@ def get_kmer_frequency_array(seq, k) -> List[float | int]:
         # after which, we will evenly split the weighting of the kmers' frequency
         # across all possible kmers
         kmers_possible = gen_all_kmers(kmer)
-        logging.debug(f'Found all possible kmers : {kmers_possible}')
 
         for kmer_possible in kmers_possible:
             kmer_index = map_kmer_to_index(kmer_possible)
@@ -153,9 +152,6 @@ def get_kmer_frequency_array(seq, k) -> List[float | int]:
             weight = 1 / len(kmers_possible) if len(kmers_possible) != 1 else 1
 
             kmer_frequencies[kmer_index] += weight
-            logging.debug(
-                f'{kmer_possible}: Its index at weight {weight}, {kmer_index}'
-            )
 
     return kmer_frequencies
 

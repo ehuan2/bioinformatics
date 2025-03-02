@@ -6,7 +6,8 @@
 This is the solution to problem 2, the deBruijn graph building question.
 
 As input it takes a FASTA file which represents the (k + 1)-mer which represents
-the nodes, and then the ...
+the set of sequences, and then it outputs the edges based on this set of seqs,
+and its reverse complements which are the k-mer substrings.
 """
 
 from Bio import SeqIO
@@ -18,14 +19,14 @@ import os
 import sys
 
 
-def get_sequences(input_file) -> List[str]:
+def get_sequences(input_file) -> List[Seq]:
     """Parses the input file path to get the list of fasta sequences.
 
     Args:
         input_file (str): Path to input file.
 
     Returns:
-        List[str]: The list of fasta sequences
+        List[Seq]: The list of fasta sequences
     """
     sequences = []
 
@@ -39,32 +40,7 @@ def get_sequences(input_file) -> List[str]:
 
     return sequences
 
-'''
-def get_reverse_complements(seqs: List[str]) -> List[str]:
-    """Given a list of sequences, get the list of reverse complements
 
-    Args:
-        seqs (List[str]): List of sequences
-
-    Returns:
-        List[str]: list of reverse complements
-    """
-    complement_mapping = {
-        'A': 'T', 'T': 'A', 'C': 'G', 'G': 'C'
-    }
-    
-    reverse_complements = []
-
-    for seq in seqs:
-        # take the reverse, then find its complement by mapping the nucleotides
-        # to their complement
-        next_seq = ""
-        for base in seq[::-1]:
-            next_seq += complement_mapping[base]
-        logging.debug(f'Reverse complement of {seq} is {next_seq}')
-        reverse_complements.append(next_seq)
-    return reverse_complements
-'''
 def get_reverse_complements(seqs: List[Seq]) -> List[Seq]:
     """Given a list of sequences, get the list of reverse complements
 
@@ -95,7 +71,7 @@ def get_debruijn_edges(seqs: List[Seq]) -> List[tuple]:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_file', required=True, help='Input FASTA file path')
-    parser.add_argument('-o', '--output_dir', help='Output directory, which if set will write to <input_filename>_k-mers.txt')
+    parser.add_argument('-o', '--output_dir', help='Output directory, which if set will write to <input_filename>_deBruijn.txt')
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
 
