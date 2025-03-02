@@ -170,7 +170,11 @@ def cosine_similarity(vec1, vec2):
     # this can be done easily by doing 1 / cosine_similarity - 1
 
     # In this case, we should with some small epsilon to prevent divide by 0
-    return 1 / (cosine_sim + np.finfo(float).eps if cosine_sim == 0 else cosine_sim) - 1
+    return 1 / (
+        cosine_sim + np.finfo(float).eps
+        if cosine_sim == 0 else
+        cosine_sim
+    ) - 1
 
 
 def pearson_correlation(vec1, vec2):
@@ -191,7 +195,11 @@ def pearson_correlation(vec1, vec2):
     # we can do this by using (1 - pearson) / (1 + pearson) by noting that
     # if pearson = -1, then we have \infty and if pearson = 1, then we have 0
     # if pearson = 0, then we have a distance of 1
-    return (1 - pearson_corr) / (1 + pearson_corr + np.finfo(float).eps if pearson_corr == -1 else 1 + pearson_corr)
+    return (1 - pearson_corr) / (
+        1 + pearson_corr + np.finfo(float).eps
+        if pearson_corr == -1 else
+        1 + pearson_corr
+    )
 
 
 if __name__ == '__main__':
