@@ -166,7 +166,7 @@ All code and examples are found under `q4/'. This problem was tackled with the f
   \item Generate the deBrujin graph based on the total frequency of kmers by simply grabbing each kmer and setting the from kmer as the prefix and the to kmer as the suffix.
   \item Do some analysis on this graph, including finding all the components. From these components, remove all components except for the largest one. Empirically, most of these components should be safe to remove; with kmer of size 9, we see that the component sizes are $\{7679, 2, 2, 6, 2, 3, 3, 2\}$. Since these are small enough and would potentially cause deadends within the Eulerian path finding, we remove them.
   \item Next, we clean the graph optionally using the `--clean$\_$graph' flag which if used will add and remove potential edges that are making certain nodes' indegrees and outdegrees unbalanced. Given more time, I would have added the marking of a node's depth and the removal of any branches that lead nowhere.
-  \item Finally, we find the Eulerian path (or a close one) by traversing over the edges randomly until we cannot anymore. Note this was done by turning the number of edges into weights for a probability distribution.
+  \item Finally, we find the Eulerian path (or a close one) by traversing over the edges randomly until we cannot anymore. Note this was done by turning the number of edges into weights for a probability distribution. For the starting point, we choose the node with the most out going edges compared to the incoming edges as this is more likely to be the true starting sequence.
 \end{enumerate}
 
 Run the code with the following: `python assemble$\_$genome.py -i $<$input$\_$file$>$' with the following optional flags:
@@ -175,18 +175,28 @@ Run the code with the following: `python assemble$\_$genome.py -i $<$input$\_$fi
   \item `--kmer$\_$len' specifies the kmer length to be used. Note that this makes the runtime exponentially slower due to the frequency array analysis. From experience, anything beyond $k=10$ might be unbearable, and not worth it; see the k-mer length ablations section.
   \item `--tol' specifies the upper bound for where we will move the kmer frequencies from one variable to another. See the error correction step ablations section for more details.
   \item `--clean$\_$graph' is a boolean flag which if set to true will add edges from some nodes to others and remove them where possible to balance the tree more. More details found under cleaning graph ablations.
+  \item `--seed'. \textbf{Note: This at the moment seems to be broken and cannot recover the same nucleotide sequence. So, my best run using $k = 10$ may or may not be replicable, depending on how lucky one is}.
 \end{enumerate}
 
-For my best run, use: 
+For one of my best runs, I used the k-mer length of 10, the tolerance set to 1, the seed set to 42 and setting the graph cleaning to true.
 
+\newpage
 
 \subsection*{BLAST Testing}
-For BLAST testing, I simply tested against the \href{https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastn&PAGE_TYPE=BlastSearch&LINK_LOC=blasthome}{BLAST website}. This will be a verification alongside other heuristics for how good alignments are alongside how certain ablations led to better results.
+For BLAST testing, I simply tested against the \href{https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastn&PAGE_TYPE=BlastSearch&LINK_LOC=blasthome}{BLAST website}. This will be a verification alongside other heuristics for how good alignments are alongside how certain ablations led to better results.\\
+
+For my results, I predict that the virus is of HIV strand, by the following output from BLAST after running on my file with the setting described above. Specifically, it might be \textit{PQ511694.1} according to total score:
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{figures/blast_output_k_10.PNG}
+    \caption{BLAST Output with viral alignments}
+    \label{fig:figure_7}
+\end{figure}
 
 \subsection*{Error Correction Step Ablations}
-For this set of ablations, I looked at understanding how the tolerance flag will help or reduce the accuracy of the alignment. Note: To keep things consistent, I decided to use one seed of $42$ throughout my testing and ablations. While this might not be accurate of the entirety of the tests (and would require averaging over many seeds), it does show some possible situations of using certain seeds.\\
+For this set of ablations, I looked at understanding how the tolerance flag will help or reduce the accuracy of the alignment. These ablations might not be entirely accurate because the seeding is not working properly and we would want to average over multiple seeds. However, it still showcases the general trends we would want to look to for building an understanding on how this hyperparameter affects the results.\\
 
-Below is a table of the resultant number of nodes, edges and components based on different tolerances for $k=9$:\\
+Below is a table of the resultant number of nodes, edges and components, assembled sequence based on different tolerances for $k=9$:\\
 \begin{table}[h]
 \centering
 \begin{tabular}{c|ccc}
@@ -195,18 +205,61 @@ Node Count & 8261 & 7699 & 7666 \\
 \hline
 Edge Count & 82770 & 82770 & 82770 \\
 \hline
-Component Count & 1 & 8 & 21
+Component Count & 1 & 8 & 21\\
+\hline
+Sequence length & 5973 & 2040 & 8
 \end{tabular}
 \caption{Graph Analysis on Various Tolerance Ablations}
+\label{tab:table_1}
 \end{table}
 
 Generally, there are less nodes (with the same number of edges as expected) but a higher number of components due to cutting off the bridges between components. This however, is not an issue because each component is composed of a very small number of kmers, meaning that they are likely to be errors than anything else. Switching these reads to an existing read is a much more likely situation.\\
 
-This is backed up by the BLAST testing where
+However, careful consideration is needed as with this run, if you use tolerance as 2, the resultant sequence length gets reduced down to 8 nucleotides a piece, likely due to a higher frequency of edges going towards a short branch, and being unlucky and getting stuck. This can be resolved through graph cleaning, and pruning any of these short branches.
 
-\subsection*{Graph Analysis; K-mer Length Ablations}
+\subsection*{K-mer Length Ablations}
+The k-mer length is probably the most important hyperparameter in this code, as it determines the graph structure and how well this graph structure will be traversed.\\
+
+The following table showcases the ablations done on the k-mer length, uncovering how the graph changes over time, and the resultant downstream effect on the assembled genome sequence length given the same starting seed. The results can be seen under the `logs/' folder, and can be executed by running the `run$\_$k$\_$ablations.sh' bash script.
+\begin{table}[h]
+\centering
+\begin{tabular}{c|ccccccccc}
+k-mer length & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 \\ \hline
+Node Count & 4 & 16 & 64 & 255 & 937 & 2840 & 5655 & 7699 & 8607\\
+\hline
+Edge Count (before cleaning) & 89000 & 88110 & 87220 & 86330 & 85440 & 84550 & 83660 & 82770 & 81880 \\
+\hline
+Component Count & 1 & 1 & 1 & 1 & 1 & 2 & 6 & 8 & 10\\
+\hline
+Degree average (before cleaning) & 23 & 7.75 & 2.94 & 1.87 & 0.958 & 0.562 & 0.368 & 0.282 & 0.228\\
+\hline
+Degree average (after cleaning) & 0 & 3.125 & 1.19 & 0.48 & 0.303 & 0.218 & 0.195 & 0.170 & 0.166 \\
+\hline
+Outdegree average (after cleaning) & 22261.5 & 5506.5 & 1363.3 & 338.88 & 91.354 & 29.891 & 14.868 & 10.8 & 9.56 \\
+\hline
+Sequence length (after cleaning) & 89042 & 87706 & 85999 & 74742 & 76020 & 39537 & 8395 & 2042 & 11669
+\end{tabular}
+\caption{K-mer Length effect on graph counts for tolerance of 1}
+\end{table}
+
+Note the degree average refers to taking the absolute value of the difference between the indegree and outdegree and averaging this over all the nodes. This was repeated for before graph cleaning (adding or removing edges) and after it.\\
+
+As for the results, first note the sequence length as $k$ increases. Note that at the start, they are taking every single edge possible due to the low-complexity of the graph, meaning that it is utilizing the k-mers as well as possible. This however comes at the cost of it being highly inaccurate; if it can take any route possible, then it is simply relying on luck to know how to assemble the genome. As an aside: the sequence length can be larger than the edge count due to counting the edges before cleaning, and cleaning might lead to some extra edges added.\\
+
+This generally means that as $k$ increases, and the outdegree average decreases, that we are choosing better and better paths due to being more confident that if an edge exists, that it should exist in the original sequence. However, we run into issues where it is more likely to get stuck, as showcased in \hyperref[tab:table_1]{Table 1}'s tolerance of 2 result, causing sequences that are too short. This can be fixed by graph cleaning and pruning to get rid of branches that are too short.\\
+
+However, this does not necessitate that longer is worse for my code, in fact on one lucky seed for $k=10$, we managed to get a sequence length of 11669, with a high score of \hyperref[fig:figure_7]{20781}.
 
 \subsection*{Cleaning Graph Ablations}
+It is still uncertain whether my graph cleaning is helpful as running BLAST resulted in no significant increase or decrease in score between cleaning ablations. However, based on heurisitcs, we can assume that this graph cleaning does help as we manage to increase the chances of continuing the path finding. This holds because the degree average after cleaning decreases across all $k$, meaning that it approximates a graph with a Euclidean cycle much better. However, it is important to note that the usefulness decreases as $k$ increases, as the difference in the average after cleaning starts to decrease.
 
+\newpage
+\subsection*{Future Extensions}
+In the future, I wish to add the following:
+\begin{enumerate}
+  \item Graph cleaning and pruning to get rid of branches that are too short. This can be done through calculating the dfs path to a leaf and removing the ones that are not within a cycle.
+  \item Proper seeding so that experiments are repeatable and results are verifiable. Also, re-running these ablations on multiple different seeds.
+  \item Support higher values of $k$ by using sparse methods instead of building the $4^k$ frequency array.
+\end{enumerate}
 
 \end{document}
