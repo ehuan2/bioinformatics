@@ -312,16 +312,47 @@ def get_edges(diff_counts: Dict[str, int]) -> Tuple[List[Edge], List[Edge], List
 
     return edges_to_add, edges_to_remove
 
-def find_eulerian_path(graph: Dict[str, List[str]]) -> str:
-    """Given a graph, finds the Eulerian path.
+
+def get_depth_graph(graph: Dict[str, Dict[str, int]]) -> Dict[str, int]:
+    """Given a graph, calculate its depth chart, i.e. how far a node can go.
+        If it reaches itself again, then simply return the length of the cycle.
 
     Args:
-        graph (Dict[str, List[str]]): Graph with a set Eulerian path.
+        graph (Dict[str, Dict[str, int]]): The depth for each node.
+
+    Returns:
+        Dict[str, int]: Calculates the depth of each node as a dictionary.
+    """
+    # TODO: As an extension given more time, and get rid of thte ones we don't need
+    pass
+
+
+def find_eulerian_path(graph: Dict[str, Dict[str, int]], start: str) -> str:
+    """Given a graph, and the starting point, finds the Eulerian path.
+
+    Args:
+        graph (Dict[str, Dict[str, int]]): Graph with a set Eulerian path.
+        start: The starting kmer.
 
     Returns:
         str: The final constructed genome.
     """
-    pass
+    seq = start
+    node_visit = start
+
+    while any(value > 0 for value in graph[node_visit].values()):
+        # sample from a probability distribution such that the values represent the probability mass
+        total = sum(graph[node_visit].values())
+        next_node = np.random.choice(
+            list(graph[node_visit].keys()),
+            p=[value / total for value in graph[node_visit].values()]
+        )
+        graph[node_visit][next_node] -= 1
+        seq += next_node[-1]
+        node_visit = next_node
+
+    return seq
+
 
 
 def assemble_genome(seqs: List[SeqRecord], kmer_len: int, tol: int) -> str:
@@ -363,8 +394,8 @@ def assemble_genome(seqs: List[SeqRecord], kmer_len: int, tol: int) -> str:
         else:
             graph[src][dest] = count
 
-    # logging.debug(graph)
-    _ = check_eulerian_path(graph)
+    if DEBUG:
+        _ = check_eulerian_path(graph)
 
     # and we remove them too
     for src, dest, count in edges_to_remove:
@@ -376,7 +407,9 @@ def assemble_genome(seqs: List[SeqRecord], kmer_len: int, tol: int) -> str:
     
     # now we take the node with the most out degrees as the starting path
     # continue going for as long as possible
-    exit()
+    start = max(diff_counts.items(), key=lambda x: x[1])[0]
+    logging.debug(f'Starting kmer: {start}')
+
     # Finally, we want to calculate the Eulerian path!
     return find_eulerian_path(graph, start)
 
@@ -401,7 +434,7 @@ if __name__ == '__main__':
         os.makedirs(args.output_dir)
 
     output_file_path = (
-        os.path.join(args.output_dir, f'{os.path.basename(args.input)}_assembled_genome.fna')
+        os.path.join(args.output_dir, f'{os.path.basename(args.input)}_assembled_genome_kmer_{args.kmer_len}_tol_{args.tol}.fna')
         if args.output_dir else
         'assembled_genome.fna'
     )
