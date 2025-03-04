@@ -158,5 +158,55 @@ However, for the Pearson correlation, we are assuming that the various frequenci
 
 Therefore for its interpretability and usage as a metric, I believe that the cosine similarity should be the best metric to use.
 
+\section*{Part 4: Genome Assembly}
+All code and examples are found under `q4/'. This problem was tackled with the following strategy:
+\begin{enumerate}
+  \item Grab the sequences and create an aggregate kmer-frequency array of length kmer by summing up the frequency over all possible kmers.
+  \item With the optional flag `-t' or `--tol', allow the user to define what kmer frequency should be merged with its neighbours, defined as all possible kmers that are a single nucloetide away. This is the error correction step.
+  \item Generate the deBrujin graph based on the total frequency of kmers by simply grabbing each kmer and setting the from kmer as the prefix and the to kmer as the suffix.
+  \item Do some analysis on this graph, including finding all the components. From these components, remove all components except for the largest one. Empirically, most of these components should be safe to remove; with kmer of size 9, we see that the component sizes are $\{7679, 2, 2, 6, 2, 3, 3, 2\}$. Since these are small enough and would potentially cause deadends within the Eulerian path finding, we remove them.
+  \item Next, we clean the graph optionally using the `--clean$\_$graph' flag which if used will add and remove potential edges that are making certain nodes' indegrees and outdegrees unbalanced. Given more time, I would have added the marking of a node's depth and the removal of any branches that lead nowhere.
+  \item Finally, we find the Eulerian path (or a close one) by traversing over the edges randomly until we cannot anymore. Note this was done by turning the number of edges into weights for a probability distribution.
+\end{enumerate}
+
+Run the code with the following: `python assemble$\_$genome.py -i $<$input$\_$file$>$' with the following optional flags:
+\begin{enumerate}
+  \item `--output$\_$dir' specifies the output directory. If set, this also changes the output file to be of form: $<$input$>\_$assembled$\_$genome$\_$kmer$\_<$kmer-length$>\_$tol$\_<$tolerance$>\_$clean$\_$graph$\_<$clean-graph$>\_$seed$\_<$seed$>$.fna
+  \item `--kmer$\_$len' specifies the kmer length to be used. Note that this makes the runtime exponentially slower due to the frequency array analysis. From experience, anything beyond $k=10$ might be unbearable, and not worth it; see the k-mer length ablations section.
+  \item `--tol' specifies the upper bound for where we will move the kmer frequencies from one variable to another. See the error correction step ablations section for more details.
+  \item `--clean$\_$graph' is a boolean flag which if set to true will add edges from some nodes to others and remove them where possible to balance the tree more. More details found under cleaning graph ablations.
+\end{enumerate}
+
+For my best run, use: 
+
+
+\subsection*{BLAST Testing}
+For BLAST testing, I simply tested against the \href{https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastn&PAGE_TYPE=BlastSearch&LINK_LOC=blasthome}{BLAST website}. This will be a verification alongside other heuristics for how good alignments are alongside how certain ablations led to better results.
+
+\subsection*{Error Correction Step Ablations}
+For this set of ablations, I looked at understanding how the tolerance flag will help or reduce the accuracy of the alignment. Note: To keep things consistent, I decided to use one seed of $42$ throughout my testing and ablations. While this might not be accurate of the entirety of the tests (and would require averaging over many seeds), it does show some possible situations of using certain seeds.\\
+
+Below is a table of the resultant number of nodes, edges and components based on different tolerances for $k=9$:\\
+\begin{table}[h]
+\centering
+\begin{tabular}{c|ccc}
+Tolerance & 0 & 1 & 2 \\ \hline
+Node Count & 8261 & 7699 & 7666 \\
+\hline
+Edge Count & 82770 & 82770 & 82770 \\
+\hline
+Component Count & 1 & 8 & 21
+\end{tabular}
+\caption{Graph Analysis on Various Tolerance Ablations}
+\end{table}
+
+Generally, there are less nodes (with the same number of edges as expected) but a higher number of components due to cutting off the bridges between components. This however, is not an issue because each component is composed of a very small number of kmers, meaning that they are likely to be errors than anything else. Switching these reads to an existing read is a much more likely situation.\\
+
+This is backed up by the BLAST testing where
+
+\subsection*{Graph Analysis; K-mer Length Ablations}
+
+\subsection*{Cleaning Graph Ablations}
+
 
 \end{document}
