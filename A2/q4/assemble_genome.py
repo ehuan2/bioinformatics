@@ -195,6 +195,9 @@ def check_eulerian_path(graph: Dict[str, Dict[str, int]]):
         f'Max diff: {max(diff_counts.items(), key=lambda x: x[1])}, '
         f'Average diff: {sum(map(lambda x: abs(x[1]), diff_counts.items())) / len(diff_counts)}'
     )
+    logging.debug(
+        f'Average outdegree: {sum(map(lambda value: value["outdeg"], degree_counts.values())) / len(degree_counts.values())}')
+
     logging.debug(f'Match count: {len(diff_counts) - len(no_match)}, Not match: {len(no_match)}')
     # logging.debug(diff_counts)
     return diff_counts
