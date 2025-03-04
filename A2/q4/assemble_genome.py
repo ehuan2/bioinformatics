@@ -355,7 +355,7 @@ def find_eulerian_path(graph: Dict[str, Dict[str, int]], start: str) -> str:
 
 
 
-def assemble_genome(seqs: List[SeqRecord], kmer_len: int, tol: int) -> str:
+def assemble_genome(seqs: List[SeqRecord], kmer_len: int, tol: int, clean_graph: bool) -> str:
     """Given a list of sequences to assemble, return a string
     representing the final assembled genome.
 
@@ -385,25 +385,26 @@ def assemble_genome(seqs: List[SeqRecord], kmer_len: int, tol: int) -> str:
     diff_counts = check_eulerian_path(graph)
 
     # using these diff counts, we'll try to match outdegrees and indegrees, and create edges to add
-    edges_to_add, edges_to_remove = get_edges(diff_counts)
-    
-    # next, we add these edges to the graph
-    for src, dest, count in edges_to_add:
-        if dest in graph[src]:
-            graph[src][dest] += count
-        else:
-            graph[src][dest] = count
+    if clean_graph:
+        edges_to_add, edges_to_remove = get_edges(diff_counts)
+        
+        # next, we add these edges to the graph
+        for src, dest, count in edges_to_add:
+            if dest in graph[src]:
+                graph[src][dest] += count
+            else:
+                graph[src][dest] = count
 
-    if DEBUG:
-        _ = check_eulerian_path(graph)
+        if DEBUG:
+            _ = check_eulerian_path(graph)
 
-    # and we remove them too
-    for src, dest, count in edges_to_remove:
-        if dest in graph[src]:
-            graph[src][dest] -= count
-            assert graph[src][dest] >= 0
-    
-    diff_counts = check_eulerian_path(graph)
+        # and we remove them too
+        for src, dest, count in edges_to_remove:
+            if dest in graph[src]:
+                graph[src][dest] -= count
+                assert graph[src][dest] >= 0
+        
+        diff_counts = check_eulerian_path(graph)
     
     # now we take the node with the most out degrees as the starting path
     # continue going for as long as possible
@@ -420,21 +421,36 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output_dir', help='Output directory, which if set will write everything to there')
     parser.add_argument('-k', '--kmer_len', default=4, type=int, help='The kmer length')
     parser.add_argument('-t', '--tol', default=1, type=int, help='The kmer frequency tolerance')
+    parser.add_argument('-s', '--seed', default=0, type=int, help='Seed for random traversal')
     parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--clean_graph', action='store_true')
     args = parser.parse_args()
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
         DEBUG = True
 
-    assembled_genome = assemble_genome(get_sequences(args.input), args.kmer_len, args.tol)
+    # set the random seed to use throughout
+    np.random.seed(args.seed)
+
+    assembled_genome = assemble_genome(
+        get_sequences(args.input),
+        args.kmer_len,
+        args.tol,
+        args.clean_graph
+    )
 
     # next handle the output directories
     if args.output_dir and not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
 
     output_file_path = (
-        os.path.join(args.output_dir, f'{os.path.basename(args.input)}_assembled_genome_kmer_{args.kmer_len}_tol_{args.tol}.fna')
+        os.path.join(
+            args.output_dir,
+            f'{os.path.basename(args.input)}_assembled_genome_kmer_'
+            f'{args.kmer_len}_tol_{args.tol}_clean_graph_{args.clean_graph}'
+            f'_seed_{args.seed}.fna'
+        )
         if args.output_dir else
         'assembled_genome.fna'
     )
