@@ -57,24 +57,35 @@ def gen_reverse_complement_pair(seq):
     return tuple(sorted(seq_list))
 
 
-def is_one_nucleotide_away(pair_one, pair_two):
-    # returns whether or not pairs are one nucleotide away or not
-    def is_single_nucleotide_apart(seq1, seq2):
-        diffs = 0
-        for i in range(len(seq1)):
-            if seq1[i] != seq2[i]:
-                diffs += 1
-                if diffs >= 2:
-                    return False
+# returns whether or not pairs are one nucleotide away or not
+def is_single_nucleotide_apart(seq1, seq2):
+    diffs = 0
+    for i in range(len(seq1)):
+        if seq1[i] != seq2[i]:
+            diffs += 1
+            if diffs >= 2:
+                return False
 
-        return diffs == 1
+    return diffs == 1
 
+
+# returns whether or not the given sequence is one nucleotide away from
+# a different pair
+def is_one_nucleotide_away(seq, pair_two):
     return (
-        is_single_nucleotide_apart(pair_one[0], pair_two[0]) or
-        is_single_nucleotide_apart(pair_one[0], pair_two[1]) or
-        is_single_nucleotide_apart(pair_one[1], pair_two[0]) or
-        is_single_nucleotide_apart(pair_one[1], pair_two[1])
+        is_single_nucleotide_apart(seq, pair_two[0]) or
+        is_single_nucleotide_apart(seq, pair_two[1])
     )
+
+
+# finds which of the pair is one nucleotide away
+def find_nucleotide_diff(seq1, pair2):
+    if is_single_nucleotide_apart(seq1, pair2[0]):
+        return pair2[0]
+    elif is_single_nucleotide_apart(seq1, pair2[1]):
+        return pair2[1]
+    raise RuntimeError('Should not reach here...')
+
 
 if __name__ == '__main__':
     # first parse for the input file
@@ -101,9 +112,12 @@ if __name__ == '__main__':
         else:
             count_mapping[key] = {
                 'count': 1,
-                'seq': seq,
+                'seq': set(),
                 'neighbours': set()
             }
+        
+        # add the current sequence to the set
+        count_mapping[key]['seq'].add(seq)
 
     logging.debug(count_mapping)
 
@@ -113,11 +127,12 @@ if __name__ == '__main__':
     for i in range(len(keys)):
         if count_mapping[keys[i]]['count'] == 1:
             count_one_keys.add(keys[i])
-        
+
+        # then add the neighbours as necessary
         for j in range(len(keys)):
             if i == j:
                 continue
-            if is_one_nucleotide_away(keys[i], keys[j]):
+            if any(is_one_nucleotide_away(seq, keys[j]) for seq in count_mapping[keys[i]]['seq']):
                 count_mapping[keys[i]]['neighbours'].add(keys[j])
 
     logging.debug(count_mapping)
@@ -145,7 +160,8 @@ if __name__ == '__main__':
         # into the other node. We merge by updating the count_one_keys
         # as well as the neighbours
         logging.debug(f'Merging {current_node} into {merge_with_node}')
-        print(f'[{current_node}]->[{merge_with_node}]')
+        current_seq = list(count_mapping[current_node]["seq"])[0]
+        print(f'[{current_seq}]->[{find_nucleotide_diff(current_seq, merge_with_node)}]')
 
         count_mapping[merge_with_node]['count'] += 1
         count_mapping[current_node]['count'] = 0
