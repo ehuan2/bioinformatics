@@ -34,23 +34,26 @@ if __name__ == '__main__':
     counter = 0
 
     sequences = []
+    copies_counter = []
 
     for i in range(num_sequences):
         seq = Seq(gen_random_seq(sequence_length))
-        for j in range(random.randint(2, args.copies)):
+        copies = random.randint(2, args.copies)
+        counter += copies
+        copies_counter.append(counter)
+        for j in range(copies):
             if random.randint(1, 2) == 1:
                 sequences.append(str(seq))
             else:
                 sequences.append(str(seq.reverse_complement()))
-        
-    mutation_indices = np.random.choice(len(sequences), size=args.mutations, replace=False)
-    # print(mutation_indices)
+
+    assert num_sequences >= args.mutations
+    mutation_indices = np.random.choice(num_sequences, size=args.mutations, replace=False)
+    # print(f'Mutation indices: {mutation_indices}, mutation indices real: {[copies_counter[index] - 1 for index in mutation_indices]}')
 
     for i in mutation_indices:
         # mutate one of these...
-        # print(sequences[i])
-        sequences[i] = random_mutation(sequences[i], sequence_length)
-        # print(sequences[i])
+        sequences[copies_counter[i] - 1] = random_mutation(sequences[copies_counter[i] - 1], sequence_length)
 
     random.shuffle(sequences)
 

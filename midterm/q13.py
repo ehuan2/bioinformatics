@@ -1,4 +1,4 @@
-# edit_distance.py
+# q13.py
 # Author: Eric Huang
 # Date: March 11th 2025
 import argparse
@@ -152,6 +152,7 @@ if __name__ == '__main__':
         # choose the first one and merge it to one of its neighbours
         # should always have a neighbour, or else error
         current_node = count_one_list[0]
+        logging.debug(f'Current key: {current_node}, {count_mapping[current_node]["neighbours"]}')
         assert len(count_mapping[current_node]['neighbours']) > 0
         assert count_mapping[current_node]['count'] == 1
         merge_with_node = list(count_mapping[current_node]['neighbours'])[0]
