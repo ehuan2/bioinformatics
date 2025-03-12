@@ -185,3 +185,5 @@ if __name__ == '__main__':
     # 5. Different types of graphs! We would expect any type of graph where:
     # a. Each node is either on its own with a count >= 2
     # b. Each node is connected to at least one other node
+
+    # TODO: test with an empty case
