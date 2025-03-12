@@ -96,4 +96,7 @@ if __name__ == '__main__':
 
     # print([map_index_to_kmer(i, args.k) for i in range(4**args.k)])
     # print(frequency)
-    np.savez(args.output, frequency)
+    np.savez(f'{args.output}.npz', frequency)
+    with open(f'{args.output}.fna', 'w') as output_file:
+        output_file.write('>seq0\n')
+        output_file.write(seq)
