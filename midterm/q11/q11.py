@@ -67,22 +67,31 @@ def count_edges(graph):
 
 # does a single pass of depth first search, stopping when we cannot go anymore
 def dfs(graph, start):
-    seq = start
+    to_add = ''
     node_visit = start
 
     # do a dfs to find the path starting at start
-    while any(value > 0 for value in graph[node_visit].values()):
-        # sample from a probability distribution such that the values represent the probability mass
-        total = sum(graph[node_visit].values())
-        next_node = np.random.choice(
-            list(graph[node_visit].keys()),
-            p=[value / total for value in graph[node_visit].values()]
-        )
+    while True:
+        next_node = None
+
+        # find a node with a non-zero value
+        for node, value in graph[node_visit].items():
+            if value > 0:
+                next_node = node
+                break
+
+        if next_node is None:
+            break
+        
         graph[node_visit][next_node] -= 1
-        seq += next_node[-1]
+        to_add += next_node[-1]
         node_visit = next_node
 
-    return seq, graph
+        # let's stop every time it visits oneself again
+        if start == node_visit:
+            break
+
+    return to_add, graph
 
 
 def find_eulerian_path(graph, start, k):
@@ -96,26 +105,48 @@ def find_eulerian_path(graph, start, k):
         str: The final constructed genome.
     """
     # first grab the possible sequence
-    seq, graph = dfs(graph, start)
+    to_add, graph = dfs(graph, start)
+    seq = start + to_add
 
     # now we modify the start_seq by finding some node within the start sequence
     # that has an edge left
-    node_left_with_edge = None
-
-    while node_left_with_edge is not None:
+    while True:
         node_left_with_edge = None
-        for node in [seq[i:i + k] for i in range(len(seq) - k + 1)]:
+        
+        # these are the nodes already added to our sequence
+        all_kmers = [seq[i:i + k] for i in range(len(seq) - k + 1)]
+
+        possible_nodes = set()
+
+        for kmer in all_kmers:
+            possible_nodes.add(kmer[0:len(kmer) - 1])
+            possible_nodes.add(kmer[1:len(kmer)])
+
+        logging.debug(possible_nodes)
+
+        for node in possible_nodes:
+            assert node in graph
+
             for value in graph[node].values():
                 if value > 0:
                     node_left_with_edge = node
                     break
+
             if node_left_with_edge is not None:
                 break
 
-        # now we dfs on the node
-        add_seq, graph = dfs(graph, node_left_with_edge)
-        seq = seq[:seq.find(add_seq)] + add_seq + seq[seq.find(add_seq) + k:]
+        # stop if we have no more nodes left
+        if node_left_with_edge is None:
+            break
 
+        # now we dfs on the node
+        logging.debug(f'Num edges: {sum([sum(value for value in graph[node].values()) for node in graph.keys()])}')
+        add_seq, graph = dfs(graph, node_left_with_edge)
+        logging.debug(f'Current length to add: {len(add_seq)}, current length: {len(seq)}')
+        seq = seq[:seq.find(node_left_with_edge) + k] + add_seq + seq[seq.find(node_left_with_edge) + k:]
+        logging.debug(f'Final length: {len(seq)}')
+
+    logging.debug(f'Num edges: {sum([sum(value for value in graph[node].values()) for node in graph.keys()])}')
     return seq
 
 
@@ -144,10 +175,15 @@ if __name__ == '__main__':
     graph = build_graph(pdist, args.k)
 
     edge_counts = count_edges(graph)
+    
+    # the number of out edges should be n - k + 1
+    logging.debug(f'{sum([edge["outdeg"] for edge in edge_counts.values()])} number of edges')
 
     # now sort this in terms of the number of indeg - outdeg.
     # the smallest such will be the starting point, i.e. outdegs are more than the indegrees
     nodes = list(graph.keys())
     nodes = sorted(nodes, key=lambda x: edge_counts[x]['indeg'] - edge_counts[x]['outdeg'])
 
-    print(find_eulerian_path(graph, nodes[0], args.k))
+    path = find_eulerian_path(graph, nodes[0], args.k)
+    print(path)
+    logging.debug(f'Length of path: {len(path)}')

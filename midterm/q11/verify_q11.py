@@ -89,5 +89,10 @@ if __name__ == '__main__':
     input_pdist = input_pdist[list(input_pdist.keys())[0]]
 
     # now let's compare this output frequency with the input frequency
-    assert np.allclose(frequency, input_pdist)
+    close_array = np.isclose(frequency, input_pdist)
+    for i in range(len(close_array)):
+        if not close_array[i]:
+            print(frequency[i], input_pdist[i])
+
+    assert all(close_array)
     print(f'Output {frequency} is good for the input {input_pdist}!')
