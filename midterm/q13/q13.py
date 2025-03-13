@@ -162,7 +162,7 @@ if __name__ == '__main__':
         # as well as the neighbours
         logging.debug(f'Merging {current_node} into {merge_with_node}')
         current_seq = list(count_mapping[current_node]["seq"])[0]
-        print(f'[{current_seq}]->[{find_nucleotide_diff(current_seq, merge_with_node)}]')
+        print(f'{current_seq}->{find_nucleotide_diff(current_seq, merge_with_node)}')
 
         count_mapping[merge_with_node]['count'] += 1
         count_mapping[current_node]['count'] = 0
