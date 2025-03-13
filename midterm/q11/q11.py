@@ -66,7 +66,7 @@ def count_edges(graph):
 
 
 # does a single pass of depth first search, stopping when we cannot go anymore
-def dfs(graph, start):
+def dfs(graph, start, end_on_even, edge_counts):
     to_add = ''
     node_visit = start
 
@@ -87,14 +87,17 @@ def dfs(graph, start):
         to_add += next_node[-1]
         node_visit = next_node
 
-        # let's stop every time it visits oneself again
-        if start == node_visit:
+        # let's stop every time it visits oneself again if we are stopping on even
+        if start == node_visit and end_on_even:
+            break
+        # otherwise, we stop when we visit a node whose indegree and outdegree are odd
+        elif (edge_counts[node_visit]['indeg'] + edge_counts[node_visit]['outdeg'] % 2) == 1:
             break
 
     return to_add, graph
 
 
-def find_eulerian_path(graph, start, k):
+def find_eulerian_path(graph, start, k, edge_counts):
     """Given a graph, and the starting point, finds the Eulerian path.
 
     Args:
@@ -105,7 +108,7 @@ def find_eulerian_path(graph, start, k):
         str: The final constructed genome.
     """
     # first grab the possible sequence
-    to_add, graph = dfs(graph, start)
+    to_add, graph = dfs(graph, start, False, edge_counts)
     seq = start + to_add
 
     # now we modify the start_seq by finding some node within the start sequence
@@ -141,9 +144,9 @@ def find_eulerian_path(graph, start, k):
 
         # now we dfs on the node
         logging.debug(f'Num edges: {sum([sum(value for value in graph[node].values()) for node in graph.keys()])}')
-        add_seq, graph = dfs(graph, node_left_with_edge)
+        add_seq, graph = dfs(graph, node_left_with_edge, True, edge_counts)
         logging.debug(f'Current length to add: {len(add_seq)}, current length: {len(seq)}')
-        seq = seq[:seq.find(node_left_with_edge) + k] + add_seq + seq[seq.find(node_left_with_edge) + k:]
+        seq = seq[:seq.find(node_left_with_edge) + k - 1] + add_seq + seq[seq.find(node_left_with_edge) + k - 1:]
         logging.debug(f'Final length: {len(seq)}')
 
     logging.debug(f'Num edges: {sum([sum(value for value in graph[node].values()) for node in graph.keys()])}')
@@ -176,6 +179,7 @@ if __name__ == '__main__':
 
     edge_counts = count_edges(graph)
     
+    # print(graph)
     # the number of out edges should be n - k + 1
     logging.debug(f'{sum([edge["outdeg"] for edge in edge_counts.values()])} number of edges')
 
@@ -184,6 +188,19 @@ if __name__ == '__main__':
     nodes = list(graph.keys())
     nodes = sorted(nodes, key=lambda x: edge_counts[x]['indeg'] - edge_counts[x]['outdeg'])
 
-    path = find_eulerian_path(graph, nodes[0], args.k)
+    # print(f'First node: {nodes[0]}')
+    # print(edge_counts[nodes[0]])
+    # print(f'Last node: {nodes[-1]}')
+    # print(edge_counts[nodes[-1]])
+
+    path = find_eulerian_path(graph, nodes[0], args.k, edge_counts)
     print(path)
-    logging.debug(f'Length of path: {len(path)}')
+    # logging.debug(f'Length of path: {len(path)}')
+    # logging.debug(path[-4:])
+
+    # todo: delete the following
+    # count = 0
+    # for i in range(len(path) - args.k + 1):
+    #     if path[i:i + args.k] == 'AAAAA':
+    #         count += 1
+    # logging.debug(count)
