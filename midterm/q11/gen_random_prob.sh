@@ -1,0 +1,1 @@
+python gen_random_prob.py -k 2 --output input/random_k2

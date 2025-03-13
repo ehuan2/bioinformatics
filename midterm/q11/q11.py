@@ -162,12 +162,26 @@ if __name__ == '__main__':
     # first we grab the number of each kmer that we want
     # then, we perform short assembly on it
     pdist_map = np.load(args.p)
-    pdist = pdist_map[list(pdist_map.keys())[0]]
+    input_pdist = pdist_map[list(pdist_map.keys())[0]]
 
     # now, we find the exact number of kmers that we should expect by multiplying it
     # by the amount that would get us the total length which is l - k + 1
     f1_norm = args.L - args.k + 1
-    pdist *= f1_norm
+    # assume that rounding should be okay
+    pdist = np.round(input_pdist * f1_norm)
+    
+    if sum(pdist) > f1_norm:
+        # then remove some random kmer, as it won't matter as much -- should max be 1
+        while sum(pdist) > f1_norm:
+            sample = np.random.choice(len(pdist), p=input_pdist)
+            if pdist[sample] > 0:
+                pdist[sample] -= 1
+
+    elif sum(pdist) < f1_norm:
+        # add some random kmer, as it won't matter as much -- should max be 1
+        samples = np.random.choice(len(pdist), f1_norm - int(sum(pdist)), p=input_pdist)
+        for sample in samples:
+            pdist[sample] += 1
 
     # handle the special case of k being 1, where you simply just print it all out
     # one by one
@@ -176,6 +190,7 @@ if __name__ == '__main__':
         for i in range(4):
             output_str += (map_index_to_kmer(i, 1) * int(pdist[i]))
         print(output_str)
+        logging.debug(len(output_str))
         exit()
 
     graph = build_graph(pdist, args.k)
@@ -191,4 +206,7 @@ if __name__ == '__main__':
     nodes = sorted(nodes, key=lambda x: edge_counts[x]['indeg'] - edge_counts[x]['outdeg'])
 
     path = find_eulerian_path(graph, nodes[0], args.k)
+    # print the substring of it
     print(path)
+
+    logging.debug(len(path))

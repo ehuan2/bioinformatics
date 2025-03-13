@@ -1,0 +1,1 @@
+python gen_sequences.py --len 100 -k 3 --output input/k_3_n_100
