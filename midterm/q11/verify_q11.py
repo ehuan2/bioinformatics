@@ -65,7 +65,7 @@ if __name__ == '__main__':
     parser.add_argument('-l', '--len', type=int, required=True)
     parser.add_argument('-k', type=int, required=True)
     parser.add_argument('-i', '--input_file', required=True)
-    parser.add_argument('-s', '--input_seq', required=True)
+    parser.add_argument('-s', '--input_seq')
     parser.add_argument('-o', '--output', required=True)
     args = parser.parse_args()
 
@@ -75,26 +75,30 @@ if __name__ == '__main__':
     print(len(seq))
     assert len(seq) == args.len
 
-    input_seq = get_sequence(args.input_seq)
-    assert len(seq) == len(input_seq)
-
-    frequency = np.zeros(4**args.k, dtype=float)
-    input_seq_freq = np.zeros(4**args.k, dtype=float)
-
     # grab all k-mers of length k and update a frequency array
+    frequency = np.zeros(4**args.k, dtype=float)
     for i in range(args.len - args.k + 1):
         kmer = seq[i:i + args.k]
         kmer_index = map_kmer_to_index(kmer)
         frequency[kmer_index] += 1
-        
-        input_seq_freq[
-            map_kmer_to_index(input_seq[i:i + args.k])
-        ] += 1
+ 
+    if args.input_seq:
+        input_seq = get_sequence(args.input_seq)
+        assert len(seq) == len(input_seq)
 
-    if not np.all(frequency == input_seq_freq):
-        print(frequency, input_seq_freq)
-        raise RuntimeError(f'Did not pass test, frequencies do not match')
+        input_seq_freq = np.zeros(4**args.k, dtype=float)
+        for i in range(args.len - args.k + 1):
+            kmer = seq[i:i + args.k]
+            kmer_index = map_kmer_to_index(kmer)
+            
+            input_seq_freq[
+                map_kmer_to_index(input_seq[i:i + args.k])
+            ] += 1
 
+        if not np.all(frequency == input_seq_freq):
+            print(frequency, input_seq_freq)
+            raise RuntimeError(f'Did not pass test, frequencies do not match')
+       
     for i in range(4**args.k):
         frequency[i] /= (args.len - args.k + 1)
 
