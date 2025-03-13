@@ -138,7 +138,7 @@ def find_eulerian_path(graph, start, k):
 
         # now we dfs on the node
         logging.debug(f'Num edges: {sum([sum(value for value in graph[node].values()) for node in graph.keys()])}')
-        add_seq, graph = dfs(graph, node_left_with_edge, True, edge_counts)
+        add_seq, graph = dfs(graph, node_left_with_edge)
         logging.debug(f'Current length to add: {len(add_seq)}, current length: {len(seq)}')
         seq = seq[:seq.find(node_left_with_edge) + k - 1] + add_seq + seq[seq.find(node_left_with_edge) + k - 1:]
         logging.debug(f'Final length: {len(seq)}')
@@ -190,5 +190,5 @@ if __name__ == '__main__':
     nodes = list(graph.keys())
     nodes = sorted(nodes, key=lambda x: edge_counts[x]['indeg'] - edge_counts[x]['outdeg'])
 
-    path = find_eulerian_path(graph, nodes[0], args.k, edge_counts)
+    path = find_eulerian_path(graph, nodes[0], args.k)
     print(path)
