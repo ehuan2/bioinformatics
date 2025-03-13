@@ -72,17 +72,22 @@ def dfs(graph, start, stop_at_self):
 
     # do a dfs to find the path starting at start
     while True:
-        next_node = None
-
-        # find a node with a non-zero value
+        next_nodes = []
+        # find all nodes with a non-zero value, and sample them
+        # randomly
         for node, value in graph[node_visit].items():
             if value > 0:
-                next_node = node
-                break
+                next_nodes.append((node, value))
 
-        if next_node is None:
+        if len(next_nodes) == 0:
             break
         
+        total = sum(value for _, value in next_nodes)
+        next_node = np.random.choice(
+            list([node for node, _ in next_nodes]),
+            p=[value / total for _, value in next_nodes]
+        )
+
         assert graph[node_visit][next_node] > 0
         graph[node_visit][next_node] -= 1
         to_add += next_node[-1]
@@ -125,7 +130,8 @@ def find_eulerian_path(graph, start, k):
         logging.debug(possible_nodes)
 
         for node in possible_nodes:
-            assert node in graph
+            if node not in graph:
+                continue
 
             for value in graph[node].values():
                 if value > 0:
@@ -148,6 +154,46 @@ def find_eulerian_path(graph, start, k):
 
     logging.debug(f'Num edges: {sum([sum(value for value in graph[node].values()) for node in graph.keys()])}')
     return seq
+
+
+def force_eulerian_graph(graph, edge_counts):
+    # forces a eulerian graph by adding the insufficient outdegrees to the insufficient indegrees
+    # first, we need to sort the edges into the insufficient outdegrees and the insufficient indegrees
+    insufficient_indegs = list(filter(
+        lambda node: edge_counts[node]['indeg'] < edge_counts[node]['outdeg'], list(graph.keys())
+    ))
+    insufficient_outdegs = list(filter(
+        lambda node: edge_counts[node]['indeg'] > edge_counts[node]['outdeg'], list(graph.keys())
+    ))
+
+    if len(insufficient_indegs) == 0 or len(insufficient_outdegs) == 0:
+        return graph
+
+    def f1_norm(values):
+        if all(value == 0 for value in values):
+            return np.array(values)
+        return values / np.sum(values)
+
+    # now, for each of the insufficient outdegrees, we will create a probability distribution
+    # over the indegrees and add those edge counts to the graph
+    for node in insufficient_outdegs:
+        # first generate the counts from the node to the indegrees
+        out_to_in = []
+        for indeg in insufficient_indegs:
+            count = 0.0 if indeg not in graph[node] else graph[node][indeg]
+            out_to_in.append(count)
+
+        out_to_in = f1_norm(out_to_in)
+        out_to_in *= np.abs(edge_counts[node]['indeg'] - edge_counts[node]['outdeg'])
+        out_to_in = np.round(out_to_in)
+
+        for indeg, add_edge_count in zip(insufficient_indegs, out_to_in):
+            if indeg not in graph[node]:
+                graph[node][indeg] = add_edge_count
+            else:
+                graph[node][indeg] += add_edge_count
+
+    return graph
 
 
 if __name__ == '__main__':
@@ -212,8 +258,13 @@ if __name__ == '__main__':
     nodes = list(graph.keys())
     nodes = sorted(nodes, key=lambda x: edge_counts[x]['indeg'] - edge_counts[x]['outdeg'])
 
+    # now, we also modify the graph such that we make it a perfect Eulerian cycle
+    # by adding extra edges between a lack of outdegrees to the lack of indegrees
+    # according to the same probability distribution as the kmers we would expect
+    graph = force_eulerian_graph(graph, edge_counts)
+
     path = find_eulerian_path(graph, nodes[0] if len(nodes) > 0 else list(graph.keys())[0], args.k)
     # print the substring of it
-    print(path)
+    print(path[:args.L])
 
     logging.debug(len(path))
