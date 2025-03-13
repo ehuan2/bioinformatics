@@ -145,7 +145,8 @@ if __name__ == '__main__':
     while len(count_one_keys) > 0:
         count_one_list = sorted(
             list(count_one_keys),
-            key=lambda key: len(count_mapping[key]['neighbours'])
+            key=lambda key: len(count_mapping[key]['neighbours']),
+            reverse=True # sort it such that the most neighbours appear first
         )
         logging.debug(f'Current keys and neighbours: {[(key, count_mapping[key]["neighbours"]) for key in count_one_list]}')
 
