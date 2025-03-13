@@ -99,4 +99,4 @@ if __name__ == '__main__':
     np.savez(f'{args.output}.npz', frequency)
     with open(f'{args.output}.fna', 'w') as output_file:
         output_file.write('>seq0\n')
-        output_file.write(seq)
+        output_file.write(str(seq))

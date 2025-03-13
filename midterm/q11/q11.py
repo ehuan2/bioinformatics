@@ -66,7 +66,7 @@ def count_edges(graph):
 
 
 # does a single pass of depth first search, stopping when we cannot go anymore
-def dfs(graph, start, end_on_even, edge_counts):
+def dfs(graph, start):
     to_add = ''
     node_visit = start
 
@@ -83,21 +83,15 @@ def dfs(graph, start, end_on_even, edge_counts):
         if next_node is None:
             break
         
+        assert graph[node_visit][next_node] > 0
         graph[node_visit][next_node] -= 1
         to_add += next_node[-1]
         node_visit = next_node
 
-        # let's stop every time it visits oneself again if we are stopping on even
-        if start == node_visit and end_on_even:
-            break
-        # otherwise, we stop when we visit a node whose indegree and outdegree are odd
-        elif (edge_counts[node_visit]['indeg'] + edge_counts[node_visit]['outdeg'] % 2) == 1:
-            break
-
     return to_add, graph
 
 
-def find_eulerian_path(graph, start, k, edge_counts):
+def find_eulerian_path(graph, start, k):
     """Given a graph, and the starting point, finds the Eulerian path.
 
     Args:
@@ -108,7 +102,7 @@ def find_eulerian_path(graph, start, k, edge_counts):
         str: The final constructed genome.
     """
     # first grab the possible sequence
-    to_add, graph = dfs(graph, start, False, edge_counts)
+    to_add, graph = dfs(graph, start)
     seq = start + to_add
 
     # now we modify the start_seq by finding some node within the start sequence
@@ -175,11 +169,19 @@ if __name__ == '__main__':
     f1_norm = args.L - args.k + 1
     pdist *= f1_norm
 
+    # handle the special case of k being 1, where you simply just print it all out
+    # one by one
+    if args.k == 1:
+        output_str = ''
+        for i in range(4):
+            output_str += (map_index_to_kmer(i, 1) * int(pdist[i]))
+        print(output_str)
+        exit()
+
     graph = build_graph(pdist, args.k)
 
     edge_counts = count_edges(graph)
     
-    # print(graph)
     # the number of out edges should be n - k + 1
     logging.debug(f'{sum([edge["outdeg"] for edge in edge_counts.values()])} number of edges')
 
@@ -188,19 +190,5 @@ if __name__ == '__main__':
     nodes = list(graph.keys())
     nodes = sorted(nodes, key=lambda x: edge_counts[x]['indeg'] - edge_counts[x]['outdeg'])
 
-    # print(f'First node: {nodes[0]}')
-    # print(edge_counts[nodes[0]])
-    # print(f'Last node: {nodes[-1]}')
-    # print(edge_counts[nodes[-1]])
-
     path = find_eulerian_path(graph, nodes[0], args.k, edge_counts)
     print(path)
-    # logging.debug(f'Length of path: {len(path)}')
-    # logging.debug(path[-4:])
-
-    # todo: delete the following
-    # count = 0
-    # for i in range(len(path) - args.k + 1):
-    #     if path[i:i + args.k] == 'AAAAA':
-    #         count += 1
-    # logging.debug(count)
