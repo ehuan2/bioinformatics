@@ -132,7 +132,10 @@ if __name__ == '__main__':
         for j in range(len(keys)):
             if i == j:
                 continue
-            if any(is_one_nucleotide_away(seq, keys[j]) for seq in count_mapping[keys[i]]['seq']):
+            if any(
+                is_one_nucleotide_away(seq, keys[j])
+                for seq in count_mapping[keys[i]]['seq']
+            ):
                 count_mapping[keys[i]]['neighbours'].add(keys[j])
 
     logging.debug(count_mapping)
@@ -151,12 +154,19 @@ if __name__ == '__main__':
         logging.debug(f'Current keys and neighbours: {[(key, count_mapping[key]["neighbours"]) for key in count_one_list]}')
 
         # choose the first one and merge it to one of its neighbours
-        # should always have a neighbour, or else error
+        # should always have a neighbour, or else error -- and this neighbour
+        # should have only correct reads -- if we only merge to correct reads
+        # then we should never force an errorneous read to be correct
         current_node = count_one_list[0]
         logging.debug(f'Current key: {current_node}, {count_mapping[current_node]["neighbours"]}')
         assert len(count_mapping[current_node]['neighbours']) > 0
         assert count_mapping[current_node]['count'] == 1
-        merge_with_node = list(count_mapping[current_node]['neighbours'])[0]
+
+        merge_with_node = sorted(
+            list(count_mapping[current_node]['neighbours']),
+            key=lambda key: count_mapping[key]['count'],
+            reverse=True
+        )[0] # get the node with the most counts so far to merge with
         
         # now, we should merge these two nodes together, by merging
         # into the other node. We merge by updating the count_one_keys
