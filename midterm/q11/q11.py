@@ -66,7 +66,7 @@ def count_edges(graph):
 
 
 # does a single pass of depth first search, stopping when we cannot go anymore
-def dfs(graph, start):
+def dfs(graph, start, stop_at_self):
     to_add = ''
     node_visit = start
 
@@ -88,6 +88,9 @@ def dfs(graph, start):
         to_add += next_node[-1]
         node_visit = next_node
 
+        if stop_at_self and (next_node == start):
+            break
+
     return to_add, graph
 
 
@@ -102,7 +105,7 @@ def find_eulerian_path(graph, start, k):
         str: The final constructed genome.
     """
     # first grab the possible sequence
-    to_add, graph = dfs(graph, start)
+    to_add, graph = dfs(graph, start, False)
     seq = start + to_add
 
     # now we modify the start_seq by finding some node within the start sequence
@@ -138,7 +141,7 @@ def find_eulerian_path(graph, start, k):
 
         # now we dfs on the node
         logging.debug(f'Num edges: {sum([sum(value for value in graph[node].values()) for node in graph.keys()])}')
-        add_seq, graph = dfs(graph, node_left_with_edge)
+        add_seq, graph = dfs(graph, node_left_with_edge, True)
         logging.debug(f'Current length to add: {len(add_seq)}, current length: {len(seq)}')
         seq = seq[:seq.find(node_left_with_edge) + k - 1] + add_seq + seq[seq.find(node_left_with_edge) + k - 1:]
         logging.debug(f'Final length: {len(seq)}')
@@ -202,10 +205,14 @@ if __name__ == '__main__':
 
     # now sort this in terms of the number of indeg - outdeg.
     # the smallest such will be the starting point, i.e. outdegs are more than the indegrees
+    nodes = filter(
+        lambda key: (edge_counts[key]['indeg'] + edge_counts[key]['outdeg']) % 2 == 1,
+        list(graph.keys())
+    )
     nodes = list(graph.keys())
     nodes = sorted(nodes, key=lambda x: edge_counts[x]['indeg'] - edge_counts[x]['outdeg'])
 
-    path = find_eulerian_path(graph, nodes[0], args.k)
+    path = find_eulerian_path(graph, nodes[0] if len(nodes) > 0 else list(graph.keys())[0], args.k)
     # print the substring of it
     print(path)
 

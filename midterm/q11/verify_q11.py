@@ -99,6 +99,15 @@ if __name__ == '__main__':
             print(frequency, input_seq_freq)
             raise RuntimeError(f'Did not pass test, frequencies do not match')
        
+    else:
+        input_pdist = np.load(args.input_file)
+        input_pdist = input_pdist[list(input_pdist.keys())[0]]
+        input_pdist *= args.len - args.k + 1
+        print(f'Input: {input_pdist}, Output: {frequency}')
+        print(f'{np.average(np.abs(input_pdist - frequency))}')
+        assert np.allclose(input_pdist, frequency)
+
+
     for i in range(4**args.k):
         frequency[i] /= (args.len - args.k + 1)
 
