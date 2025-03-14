@@ -1,4 +1,5 @@
 import argparse
+from collections import deque
 import logging
 import sys
 import numpy as np
@@ -28,6 +29,7 @@ def build_graph(pdist, kmer_len):
 
     # now we construct a graph with these kmer counts    
     graph = {}
+    dual_graph = {}
     for i in range(len(pdist)):
         if pdist[i] == 0:
             continue
@@ -36,16 +38,88 @@ def build_graph(pdist, kmer_len):
 
         if kmer_from not in graph.keys():
             graph[kmer_from] = {}
+            dual_graph[kmer_from] = set()
         
         if kmer_to not in graph.keys():
             graph[kmer_to] = {}
+            dual_graph[kmer_to] = set()
         
         if kmer_to not in graph[kmer_from]:
             graph[kmer_from][kmer_to] = 0
 
         graph[kmer_from][kmer_to] += pdist[i]
+        
+        # add edges going both ways
+        dual_graph[kmer_from].add(kmer_to)
+        dual_graph[kmer_to].add(kmer_from)
 
-    return graph
+    return graph, dual_graph
+
+
+def bfs(graph, start):
+    """Perform bfs as a helper function to the number of components.
+
+    Args:
+        graph (Dict[str, List[str]]): The given graph
+        start (str): The starting node.
+
+    Returns:
+        set: The set of visited graphs seen
+    """
+    if start not in graph:
+        return []
+    
+    visited = set()
+    queue = deque([start])
+    visited.add(start)
+    
+    while len(queue) != 0:
+        node = queue.popleft()
+        
+        for neighbor in graph[node]:
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append(neighbor)
+
+    return visited
+
+
+def get_components(graph):
+    """Given a graph, computes the components.
+
+    Args:
+        graph (Dict[str, List[str]]): The deBruijn graph.
+
+    Returns:
+        List[str]: The components as the list of keys.
+    """
+    comp_sizes = []
+    nodes_visited = set()
+
+    for key in graph.keys():
+        if key in nodes_visited:
+            # do the breadth first search with nodes_visited
+            continue
+
+        visited_from_key = bfs(graph, key)
+        for visited_node in visited_from_key:
+            nodes_visited.add(visited_node)
+        nodes_visited.add(key)
+        comp_sizes.append(visited_from_key)
+    
+    return comp_sizes
+
+
+def build_components(graph, dual_graph):
+    components = get_components(dual_graph)
+    
+    graph_subsets = []
+    for component in components:
+        graph_subsets.append({
+            key: graph[key] for key in component
+        })
+
+    return graph_subsets
 
 
 def count_edges(graph):
@@ -196,6 +270,19 @@ def force_eulerian_graph(graph, edge_counts):
     return graph
 
 
+def score_components(components):
+    components_edges_count = [
+        sum(
+            count
+            for neighbour_dict in component.values()
+            for count in neighbour_dict.values()
+        )
+        for component in components
+    ]
+
+    print(sorted(zip(components_edges_count, components), key=lambda x: x[0]))
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--k', type=int, required=True)
@@ -242,29 +329,47 @@ if __name__ == '__main__':
         logging.debug(len(output_str))
         exit()
 
-    graph = build_graph(pdist, args.k)
+    graph, dual_graph = build_graph(pdist, args.k)
 
-    edge_counts = count_edges(graph)
-    
-    # the number of out edges should be n - k + 1
-    logging.debug(f'{sum([edge["outdeg"] for edge in edge_counts.values()])} number of edges')
+    # TODO: Calculate the eulerian path in these different components, then merge them
+    # We can merge them by simply adding them or by adding some ratio of them
+    # depending on how much they matter according to the probability mass that
+    # belongs to them
+    # we can merge them by adding them straight up
+    components = build_components(graph, dual_graph)
 
-    # now sort this in terms of the number of indeg - outdeg.
-    # the smallest such will be the starting point, i.e. outdegs are more than the indegrees
-    nodes = filter(
-        lambda key: (edge_counts[key]['indeg'] + edge_counts[key]['outdeg']) % 2 == 1,
-        list(graph.keys())
-    )
-    nodes = list(graph.keys())
-    nodes = sorted(nodes, key=lambda x: edge_counts[x]['indeg'] - edge_counts[x]['outdeg'])
+    # get a probability distribution of the components that matter most
+    components_pdist = score_components(components)
 
-    # now, we also modify the graph such that we make it a perfect Eulerian cycle
-    # by adding extra edges between a lack of outdegrees to the lack of indegrees
-    # according to the same probability distribution as the kmers we would expect
-    graph = force_eulerian_graph(graph, edge_counts)
+    component_paths = []
+    for component in components:
+        edge_counts = count_edges(component)
+        
+        # the number of out edges should be n - k + 1
+        logging.debug(f'{sum([edge["outdeg"] for edge in edge_counts.values()])} number of edges')
 
-    path = find_eulerian_path(graph, nodes[0] if len(nodes) > 0 else list(graph.keys())[0], args.k)
-    # print the substring of it
-    print(path[:args.L])
+        # now sort this in terms of the number of indeg - outdeg.
+        # the smallest such will be the starting point, i.e. outdegs are more than the indegrees
+        nodes = filter(
+            lambda key: (edge_counts[key]['indeg'] + edge_counts[key]['outdeg']) % 2 == 1,
+            list(component.keys())
+        )
+        nodes = list(component.keys())
+        nodes = sorted(nodes, key=lambda x: edge_counts[x]['indeg'] - edge_counts[x]['outdeg'])
 
-    logging.debug(len(path))
+        # now, we also modify the graph such that we make it a perfect Eulerian cycle
+        # by adding extra edges between a lack of outdegrees to the lack of indegrees
+        # according to the same probability distribution as the kmers we would expect
+        # graph = force_eulerian_graph(graph, edge_counts)
+
+        latest_path = find_eulerian_path(
+            component,
+            nodes[0] if len(nodes) > 0 else list(component.keys())[0],
+            args.k
+        )
+
+        component_paths.append(latest_path)
+        logging.debug(len(latest_path))
+
+    # then based on this probability distribution, add on components path
+    # until we hit our required L
