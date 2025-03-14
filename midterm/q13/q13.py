@@ -33,7 +33,8 @@ def parse_fasta(input_file):
         else:
             current_str += line
 
-    seqs.append(current_str)
+    if current_str != '':
+        seqs.append(current_str)
     return seqs
 
 
