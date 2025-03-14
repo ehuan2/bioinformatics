@@ -270,17 +270,46 @@ def force_eulerian_graph(graph, edge_counts):
     return graph
 
 
-def score_components(components):
-    components_edges_count = [
-        sum(
-            count
-            for neighbour_dict in component.values()
-            for count in neighbour_dict.values()
-        )
-        for component in components
-    ]
+def find_component_overlap(start_component, end_component, k):
+    # finds the overlap between the prefix of end_component and the suffix of start_component
+    overlap = 0
+    for i in range(1, min(len(end_component), len(start_component)) + 1):
+        # stop once we know that we cannot iterate anymore
+        if i == k:
+            break
+        if end_component[:i] == start_component[-i:]:
+            overlap = i
+    return overlap
 
-    print(sorted(zip(components_edges_count, components), key=lambda x: x[0]))
+
+def score_components(component_paths, k):
+    score_matrix = np.zeros((len(component_paths), len(component_paths)))
+
+    max_score = 0
+    start_index = 0
+    end_index = 1
+
+    for i in range(len(component_paths)):
+        for j in range(len(component_paths)):
+            if i == j:
+                continue
+            # set the row to be the start, column to be the end
+            score_matrix[i][j] = (
+                len(component_paths[i]) +
+                len(component_paths[j]) -
+                find_component_overlap(
+                    component_paths[i],
+                    component_paths[j],
+                    k
+                )
+            )
+
+            if max_score < score_matrix[i][j]:
+                max_score = score_matrix[i][j]
+                start_index = i
+                end_index = j
+
+    return start_index, end_index
 
 
 if __name__ == '__main__':
@@ -337,10 +366,6 @@ if __name__ == '__main__':
     # belongs to them
     # we can merge them by adding them straight up
     components = build_components(graph, dual_graph)
-
-    # get a probability distribution of the components that matter most
-    components_pdist = score_components(components)
-
     component_paths = []
     for component in components:
         edge_counts = count_edges(component)
@@ -370,6 +395,32 @@ if __name__ == '__main__':
 
         component_paths.append(latest_path)
         logging.debug(len(latest_path))
+
+
+    # now we iteratively merge these components together
+    while len(component_paths[0]) < args.L:
+        if len(component_paths) == 1:
+            # then duplicate the component path we have
+            component_paths.append(component_paths[0])
+
+        while len(component_paths) > 1:
+            start_index, end_index = score_components(component_paths, args.k)
+            next_components = []
+
+            for i in range(len(component_paths)):
+                if i == start_index or i == end_index:
+                    continue
+                next_components.append(component_paths[i])
+
+            start_comp, end_comp = component_paths[start_index], component_paths[end_index]
+            overlap = find_component_overlap(start_comp, end_comp, args.k)
+
+            next_str = start_comp + end_comp[overlap:]
+            next_components.append(next_str)
+            component_paths = next_components
+
+    print(component_paths[0][:args.L])
+    logging.debug(len(component_paths[0][:args.L]))
 
     # then based on this probability distribution, add on components path
     # until we hit our required L
