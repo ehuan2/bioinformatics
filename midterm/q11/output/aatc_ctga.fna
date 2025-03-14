@@ -1,0 +1,392 @@
+>seq0
+DEBUG:root:Number of components: 2
+DEBUG:root:73.0 number of edges
+DEBUG:root:{'ATC', 'AAT'}
+DEBUG:root:Num edges: 72.0
+DEBUG:root:Current length to add: 1, current length: 4
+DEBUG:root:Final length: 5
+DEBUG:root:{'ATC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 71.0
+DEBUG:root:Current length to add: 1, current length: 5
+DEBUG:root:Final length: 6
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 70.0
+DEBUG:root:Current length to add: 1, current length: 6
+DEBUG:root:Final length: 7
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 69.0
+DEBUG:root:Current length to add: 1, current length: 7
+DEBUG:root:Final length: 8
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 68.0
+DEBUG:root:Current length to add: 1, current length: 8
+DEBUG:root:Final length: 9
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 67.0
+DEBUG:root:Current length to add: 1, current length: 9
+DEBUG:root:Final length: 10
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 66.0
+DEBUG:root:Current length to add: 1, current length: 10
+DEBUG:root:Final length: 11
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 65.0
+DEBUG:root:Current length to add: 1, current length: 11
+DEBUG:root:Final length: 12
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 64.0
+DEBUG:root:Current length to add: 1, current length: 12
+DEBUG:root:Final length: 13
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 63.0
+DEBUG:root:Current length to add: 1, current length: 13
+DEBUG:root:Final length: 14
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 62.0
+DEBUG:root:Current length to add: 1, current length: 14
+DEBUG:root:Final length: 15
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 61.0
+DEBUG:root:Current length to add: 1, current length: 15
+DEBUG:root:Final length: 16
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 60.0
+DEBUG:root:Current length to add: 1, current length: 16
+DEBUG:root:Final length: 17
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 59.0
+DEBUG:root:Current length to add: 1, current length: 17
+DEBUG:root:Final length: 18
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 58.0
+DEBUG:root:Current length to add: 1, current length: 18
+DEBUG:root:Final length: 19
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 57.0
+DEBUG:root:Current length to add: 1, current length: 19
+DEBUG:root:Final length: 20
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 56.0
+DEBUG:root:Current length to add: 1, current length: 20
+DEBUG:root:Final length: 21
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 55.0
+DEBUG:root:Current length to add: 1, current length: 21
+DEBUG:root:Final length: 22
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 54.0
+DEBUG:root:Current length to add: 1, current length: 22
+DEBUG:root:Final length: 23
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 53.0
+DEBUG:root:Current length to add: 1, current length: 23
+DEBUG:root:Final length: 24
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 52.0
+DEBUG:root:Current length to add: 1, current length: 24
+DEBUG:root:Final length: 25
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 51.0
+DEBUG:root:Current length to add: 1, current length: 25
+DEBUG:root:Final length: 26
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 50.0
+DEBUG:root:Current length to add: 1, current length: 26
+DEBUG:root:Final length: 27
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 49.0
+DEBUG:root:Current length to add: 1, current length: 27
+DEBUG:root:Final length: 28
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 48.0
+DEBUG:root:Current length to add: 1, current length: 28
+DEBUG:root:Final length: 29
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 47.0
+DEBUG:root:Current length to add: 1, current length: 29
+DEBUG:root:Final length: 30
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 46.0
+DEBUG:root:Current length to add: 1, current length: 30
+DEBUG:root:Final length: 31
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 45.0
+DEBUG:root:Current length to add: 1, current length: 31
+DEBUG:root:Final length: 32
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 44.0
+DEBUG:root:Current length to add: 1, current length: 32
+DEBUG:root:Final length: 33
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 43.0
+DEBUG:root:Current length to add: 1, current length: 33
+DEBUG:root:Final length: 34
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 42.0
+DEBUG:root:Current length to add: 1, current length: 34
+DEBUG:root:Final length: 35
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 41.0
+DEBUG:root:Current length to add: 1, current length: 35
+DEBUG:root:Final length: 36
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 40.0
+DEBUG:root:Current length to add: 1, current length: 36
+DEBUG:root:Final length: 37
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 39.0
+DEBUG:root:Current length to add: 1, current length: 37
+DEBUG:root:Final length: 38
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 38.0
+DEBUG:root:Current length to add: 1, current length: 38
+DEBUG:root:Final length: 39
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 37.0
+DEBUG:root:Current length to add: 1, current length: 39
+DEBUG:root:Final length: 40
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 36.0
+DEBUG:root:Current length to add: 1, current length: 40
+DEBUG:root:Final length: 41
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 35.0
+DEBUG:root:Current length to add: 1, current length: 41
+DEBUG:root:Final length: 42
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 34.0
+DEBUG:root:Current length to add: 1, current length: 42
+DEBUG:root:Final length: 43
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 33.0
+DEBUG:root:Current length to add: 1, current length: 43
+DEBUG:root:Final length: 44
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 32.0
+DEBUG:root:Current length to add: 1, current length: 44
+DEBUG:root:Final length: 45
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 31.0
+DEBUG:root:Current length to add: 1, current length: 45
+DEBUG:root:Final length: 46
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 30.0
+DEBUG:root:Current length to add: 1, current length: 46
+DEBUG:root:Final length: 47
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 29.0
+DEBUG:root:Current length to add: 1, current length: 47
+DEBUG:root:Final length: 48
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 28.0
+DEBUG:root:Current length to add: 1, current length: 48
+DEBUG:root:Final length: 49
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 27.0
+DEBUG:root:Current length to add: 1, current length: 49
+DEBUG:root:Final length: 50
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 26.0
+DEBUG:root:Current length to add: 1, current length: 50
+DEBUG:root:Final length: 51
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 25.0
+DEBUG:root:Current length to add: 1, current length: 51
+DEBUG:root:Final length: 52
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 24.0
+DEBUG:root:Current length to add: 1, current length: 52
+DEBUG:root:Final length: 53
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 23.0
+DEBUG:root:Current length to add: 1, current length: 53
+DEBUG:root:Final length: 54
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 22.0
+DEBUG:root:Current length to add: 1, current length: 54
+DEBUG:root:Final length: 55
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 21.0
+DEBUG:root:Current length to add: 1, current length: 55
+DEBUG:root:Final length: 56
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 20.0
+DEBUG:root:Current length to add: 1, current length: 56
+DEBUG:root:Final length: 57
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 19.0
+DEBUG:root:Current length to add: 1, current length: 57
+DEBUG:root:Final length: 58
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 18.0
+DEBUG:root:Current length to add: 1, current length: 58
+DEBUG:root:Final length: 59
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 17.0
+DEBUG:root:Current length to add: 1, current length: 59
+DEBUG:root:Final length: 60
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 16.0
+DEBUG:root:Current length to add: 1, current length: 60
+DEBUG:root:Final length: 61
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 15.0
+DEBUG:root:Current length to add: 1, current length: 61
+DEBUG:root:Final length: 62
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 14.0
+DEBUG:root:Current length to add: 1, current length: 62
+DEBUG:root:Final length: 63
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 13.0
+DEBUG:root:Current length to add: 1, current length: 63
+DEBUG:root:Final length: 64
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 12.0
+DEBUG:root:Current length to add: 1, current length: 64
+DEBUG:root:Final length: 65
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 11.0
+DEBUG:root:Current length to add: 1, current length: 65
+DEBUG:root:Final length: 66
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 10.0
+DEBUG:root:Current length to add: 1, current length: 66
+DEBUG:root:Final length: 67
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 9.0
+DEBUG:root:Current length to add: 1, current length: 67
+DEBUG:root:Final length: 68
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 8.0
+DEBUG:root:Current length to add: 1, current length: 68
+DEBUG:root:Final length: 69
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 7.0
+DEBUG:root:Current length to add: 1, current length: 69
+DEBUG:root:Final length: 70
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 6.0
+DEBUG:root:Current length to add: 1, current length: 70
+DEBUG:root:Final length: 71
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 5.0
+DEBUG:root:Current length to add: 1, current length: 71
+DEBUG:root:Final length: 72
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 4.0
+DEBUG:root:Current length to add: 1, current length: 72
+DEBUG:root:Final length: 73
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 3.0
+DEBUG:root:Current length to add: 1, current length: 73
+DEBUG:root:Final length: 74
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 2.0
+DEBUG:root:Current length to add: 1, current length: 74
+DEBUG:root:Final length: 75
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 1.0
+DEBUG:root:Current length to add: 1, current length: 75
+DEBUG:root:Final length: 76
+DEBUG:root:{'ATC', 'CCC', 'AAT', 'TCC'}
+DEBUG:root:Num edges: 0.0
+DEBUG:root:76
+DEBUG:root:24.0 number of edges
+DEBUG:root:{'TGA', 'CTG'}
+DEBUG:root:Num edges: 23.0
+DEBUG:root:Current length to add: 1, current length: 4
+DEBUG:root:Final length: 5
+DEBUG:root:{'GAA', 'TGA', 'CTG'}
+DEBUG:root:Num edges: 22.0
+DEBUG:root:Current length to add: 1, current length: 5
+DEBUG:root:Final length: 6
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 21.0
+DEBUG:root:Current length to add: 1, current length: 6
+DEBUG:root:Final length: 7
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 20.0
+DEBUG:root:Current length to add: 1, current length: 7
+DEBUG:root:Final length: 8
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 19.0
+DEBUG:root:Current length to add: 1, current length: 8
+DEBUG:root:Final length: 9
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 18.0
+DEBUG:root:Current length to add: 1, current length: 9
+DEBUG:root:Final length: 10
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 17.0
+DEBUG:root:Current length to add: 1, current length: 10
+DEBUG:root:Final length: 11
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 16.0
+DEBUG:root:Current length to add: 1, current length: 11
+DEBUG:root:Final length: 12
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 15.0
+DEBUG:root:Current length to add: 1, current length: 12
+DEBUG:root:Final length: 13
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 14.0
+DEBUG:root:Current length to add: 1, current length: 13
+DEBUG:root:Final length: 14
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 13.0
+DEBUG:root:Current length to add: 1, current length: 14
+DEBUG:root:Final length: 15
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 12.0
+DEBUG:root:Current length to add: 1, current length: 15
+DEBUG:root:Final length: 16
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 11.0
+DEBUG:root:Current length to add: 1, current length: 16
+DEBUG:root:Final length: 17
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 10.0
+DEBUG:root:Current length to add: 1, current length: 17
+DEBUG:root:Final length: 18
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 9.0
+DEBUG:root:Current length to add: 1, current length: 18
+DEBUG:root:Final length: 19
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 8.0
+DEBUG:root:Current length to add: 1, current length: 19
+DEBUG:root:Final length: 20
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 7.0
+DEBUG:root:Current length to add: 1, current length: 20
+DEBUG:root:Final length: 21
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 6.0
+DEBUG:root:Current length to add: 1, current length: 21
+DEBUG:root:Final length: 22
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 5.0
+DEBUG:root:Current length to add: 1, current length: 22
+DEBUG:root:Final length: 23
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 4.0
+DEBUG:root:Current length to add: 1, current length: 23
+DEBUG:root:Final length: 24
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 3.0
+DEBUG:root:Current length to add: 1, current length: 24
+DEBUG:root:Final length: 25
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 2.0
+DEBUG:root:Current length to add: 1, current length: 25
+DEBUG:root:Final length: 26
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 1.0
+DEBUG:root:Current length to add: 1, current length: 26
+DEBUG:root:Final length: 27
+DEBUG:root:{'GAA', 'TGA', 'CTG', 'AAA'}
+DEBUG:root:Num edges: 0.0
+DEBUG:root:27
+AATCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCTGAAAAAAAAAAAAAAAAAAAAAA
+DEBUG:root:100

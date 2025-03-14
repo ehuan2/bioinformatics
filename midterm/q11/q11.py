@@ -367,6 +367,8 @@ if __name__ == '__main__':
     # we can merge them by adding them straight up
     components = build_components(graph, dual_graph)
     component_paths = []
+    logging.debug(f'Number of components: {len(components)}')
+
     for component in components:
         edge_counts = count_edges(component)
         
